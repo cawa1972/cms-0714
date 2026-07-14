@@ -9,4 +9,7 @@ public interface ILookupRepository
 
     /// <summary>PublishStatus options: value = pkid (as string), label = Description. Ordered by pkid.</summary>
     Task<IEnumerable<LookupItem>> GetPublishStatusesAsync();
+
+    /// <summary>CourseGroup options: value = pkid (as string), label = Description. Ordered by pkid.</summary>
+    Task<IEnumerable<LookupItem>> GetCourseGroupsAsync();
 }

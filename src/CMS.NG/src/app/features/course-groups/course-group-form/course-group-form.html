@@ -1,0 +1,27 @@
+<div class="page-toolbar">
+  <h1 class="page-title">{{ isEdit() ? '編輯課程分類' : '新增課程分類' }}</h1>
+  <span class="spacer"></span>
+  <p-button label="取消" icon="pi pi-times" severity="secondary" (onClick)="cancel()" />
+  <p-button label="儲存" icon="pi pi-check" severity="success" (onClick)="save()" [loading]="saving()" />
+</div>
+
+<form [formGroup]="form" (ngSubmit)="save()">
+  <div class="card">
+    <h2 class="card-title">課程分類資料</h2>
+
+    @if (isEdit()) {
+      <div class="field">
+        <label>主代碼</label>
+        <div class="readonly-value">{{ pkid() }}</div>
+      </div>
+    }
+
+    <div class="field">
+      <label for="description">分類說明 <span class="required">*</span></label>
+      <input id="description" type="text" pInputText class="full-width" maxlength="100" formControlName="description" />
+      @if (invalid('description')) {
+        <div class="field-error">分類說明為必填。</div>
+      }
+    </div>
+  </div>
+</form>

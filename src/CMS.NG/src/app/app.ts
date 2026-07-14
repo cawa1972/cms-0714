@@ -32,7 +32,12 @@ export class App {
       header: '選單 MENU',
       items: [
         { label: '首頁管理 Home', icon: 'pi pi-home' },
-        { label: '課程管理 Course', icon: 'pi pi-book' },
+        {
+          label: '課程管理 Course',
+          icon: 'pi pi-book',
+          expanded: true,
+          children: [{ label: '課程分類 CourseGroup', icon: 'pi pi-sitemap', route: '/course-groups' }],
+        },
         { label: '說明會 Seminar', icon: 'pi pi-comments' },
         { label: '活動管理 Promotion', icon: 'pi pi-megaphone' },
         { label: '線上報名 Forms', icon: 'pi pi-file-edit' },
