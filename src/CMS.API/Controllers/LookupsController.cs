@@ -16,4 +16,14 @@ public class LookupsController : ControllerBase
     [HttpGet("app-users")]
     public async Task<ActionResult<IEnumerable<LookupItem>>> GetAppUsers()
         => Ok(await _repository.GetAppUsersAsync());
+
+    /// <summary>PublishStatus options (value = pkid, label = Description). FK target for Course.</summary>
+    [HttpGet("publish-statuses")]
+    public async Task<ActionResult<IEnumerable<LookupItem>>> GetPublishStatuses()
+        => Ok(await _repository.GetPublishStatusesAsync());
+
+    /// <summary>Partner options (value = pkid, label = Name). FK target for Course/Certification.</summary>
+    [HttpGet("partners")]
+    public async Task<ActionResult<IEnumerable<LookupItem>>> GetPartners()
+        => Ok(await _repository.GetPartnersAsync());
 }

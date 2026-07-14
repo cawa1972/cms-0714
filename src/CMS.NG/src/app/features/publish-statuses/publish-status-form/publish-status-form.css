@@ -1,0 +1,23 @@
+:host {
+  display: block;
+}
+
+::ng-deep .full-width {
+  width: 100%;
+}
+
+::ng-deep .p-inputnumber.full-width input {
+  width: 100%;
+}
+
+.field-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.field-check label {
+  margin: 0;
+  cursor: pointer;
+}

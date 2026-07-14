@@ -1,0 +1,100 @@
+<div class="page-toolbar">
+  <h1 class="page-title">合作廠商 Partner</h1>
+  <span class="page-subtitle">課程合作廠商 / 提供者</span>
+  <span class="spacer"></span>
+  <p-button label="搜尋條件" icon="pi pi-filter" severity="secondary" (onClick)="drawerVisible.set(true)" />
+  <p-button label="新增" icon="pi pi-plus" severity="success" (onClick)="add()" />
+</div>
+
+<div class="card">
+  <p-table
+    [value]="partners()"
+    [loading]="loading()"
+    [paginator]="true"
+    [rows]="rows"
+    [first]="first"
+    [rowsPerPageOptions]="[10, 20, 50]"
+    [showCurrentPageReport]="true"
+    currentPageReportTemplate="{first}–{last} 筆，共 {totalRecords} 筆"
+    [sortField]="sortField"
+    [sortOrder]="sortOrder"
+    (onSort)="onSort($event)"
+    (onPage)="onPage($event)"
+    dataKey="pkid"
+    styleClass="p-datatable-striped p-datatable-gridlines"
+  >
+    <ng-template pTemplate="header">
+      <tr>
+        <th pSortableColumn="pkid" style="width: 6rem">主代碼 <p-sortIcon field="pkid" /></th>
+        <th pSortableColumn="name">名稱 <p-sortIcon field="name" /></th>
+        <th pSortableColumn="appKey" style="width: 9rem">應用金鑰 <p-sortIcon field="appKey" /></th>
+        <th pSortableColumn="nameOnPartnerMenu">廠商選單顯示名稱 <p-sortIcon field="nameOnPartnerMenu" /></th>
+        <th pSortableColumn="nameOnCourseDetailPage">課程詳細頁顯示名稱 <p-sortIcon field="nameOnCourseDetailPage" /></th>
+        <th pSortableColumn="displayOrder" style="width: 8rem">顯示順序 <p-sortIcon field="displayOrder" /></th>
+        <th style="width: 10rem; text-align: center">操作</th>
+      </tr>
+    </ng-template>
+
+    <ng-template pTemplate="body" let-partner>
+      <tr>
+        <td>{{ partner.pkid }}</td>
+        <td>{{ partner.name }}</td>
+        <td>{{ partner.appKey }}</td>
+        <td>{{ partner.nameOnPartnerMenu }}</td>
+        <td>{{ partner.nameOnCourseDetailPage }}</td>
+        <td>{{ partner.displayOrder }}</td>
+        <td style="text-align: center">
+          <p-button
+            icon="pi pi-eye"
+            severity="secondary"
+            [text]="true"
+            [rounded]="true"
+            pTooltip="檢視"
+            (onClick)="view(partner)"
+          />
+          <p-button
+            icon="pi pi-pencil"
+            severity="info"
+            [text]="true"
+            [rounded]="true"
+            pTooltip="編輯"
+            (onClick)="edit(partner)"
+          />
+          <p-button
+            icon="pi pi-trash"
+            severity="danger"
+            [text]="true"
+            [rounded]="true"
+            pTooltip="刪除"
+            (onClick)="remove(partner, $event)"
+          />
+        </td>
+      </tr>
+    </ng-template>
+
+    <ng-template pTemplate="emptymessage">
+      <tr>
+        <td colspan="7" style="text-align: center" class="text-muted">查無資料</td>
+      </tr>
+    </ng-template>
+  </p-table>
+</div>
+
+<p-drawer [(visible)]="drawerVisible" header="搜尋條件" position="right" styleClass="filter-drawer">
+  <div class="field">
+    <label for="kw">關鍵字</label>
+    <input
+      id="kw"
+      type="text"
+      pInputText
+      class="full-width"
+      placeholder="名稱 / 應用金鑰 / 顯示名稱"
+      [(ngModel)]="filters.keyword"
+    />
+  </div>
+
+  <div class="drawer-actions">
+    <p-button label="清除" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="clearFilters()" />
+    <p-button label="套用" icon="pi pi-check" (onClick)="applyFilters()" />
+  </div>
+</p-drawer>

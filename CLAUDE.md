@@ -25,13 +25,13 @@ global.json        pins the .NET 9 SDK (9.0.314)
 ```bash
 # Backend
 cd src/CMS.API && dotnet run           # http://localhost:5000 (Swagger at /swagger)
-dotnet test src/CMS.sln                # 12 xUnit tests
+dotnet test src/CMS.sln                # 25 xUnit tests
 
 # Frontend
 cd src/CMS.NG && npm install           # first time
 npm start                              # ng serve on http://localhost:4200
 npm test                               # Karma + Jasmine (interactive)
-ng test --watch=false --browsers=ChromeHeadless   # 28 tests, headless/CI
+ng test --watch=false --browsers=ChromeHeadless   # 51 tests, headless/CI
 ng build                               # production build
 ```
 
@@ -85,6 +85,24 @@ next feature. Two things about it are non-obvious and easy to get wrong:
   `encodeURIComponent`. This is the general "string PK" pattern from the convention.
 - **The N-N to AppUser (`AppUserRole`) joins on string keys** (`UserId`, `RoleId`), not pkids. The
   user multiselect carries `UserId` strings; option label is `UserName (UserId)`.
+
+## PublishStatus — the "user-assigned numeric PK" reference
+
+CRUD for `PublishStatus` (發布狀態), sidebar **系統管理 Admin › 發布狀態 PublishStatus**. Spec at
+`spec/admin/PublishStatus.md`. The one non-obvious thing:
+
+- **`pkid` is a `tinyint` primary key that is NOT an IDENTITY column** — it is user-assigned. This is
+  the numeric analogue of AppRole's string-PK pattern. Consequences: the INSERT writes `pkid`
+  explicitly (no `SCOPE_IDENTITY()`); `CreateAsync` returns `Task`, and the controller pre-checks
+  `ExistsAsync(pkid)` → **409** on a duplicate; `pkid` is editable in the New form but
+  `.disable()`d in Edit (use `getRawValue()` on save); C# `byte`, TS `number` (no
+  `encodeURIComponent` needed for numeric route params).
+- No FKs and no N-N, so the form skips `forkJoin` lookups. The three `bit` flags render as
+  `p-checkbox [binary]` in the form, colored `p-tag` (是/否) in list + detail, and tri-state
+  `p-select` (全部/是/否 → `null`/`true`/`false`) filters in the list drawer.
+- A **lookup endpoint** `GET /api/lookups/publish-statuses` (value = pkid string, label =
+  Description) is provided because `Course.PublishStatus_pkid` targets this table, even though the
+  feature has no FKs of its own.
 
 ## Gotchas
 

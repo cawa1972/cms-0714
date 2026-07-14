@@ -1,0 +1,14 @@
+:host {
+  display: block;
+}
+
+.drawer-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 24px;
+}
+
+::ng-deep .filter-drawer .p-select {
+  width: 100%;
+}

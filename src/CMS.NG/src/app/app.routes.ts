@@ -22,5 +22,53 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./features/app-roles/app-role-form/app-role-form').then((m) => m.AppRoleForm),
   },
+  {
+    path: 'publish-statuses',
+    loadComponent: () =>
+      import('./features/publish-statuses/publish-status-list/publish-status-list').then(
+        (m) => m.PublishStatusList,
+      ),
+  },
+  {
+    path: 'publish-statuses/new',
+    loadComponent: () =>
+      import('./features/publish-statuses/publish-status-form/publish-status-form').then(
+        (m) => m.PublishStatusForm,
+      ),
+  },
+  {
+    path: 'publish-statuses/:id',
+    loadComponent: () =>
+      import('./features/publish-statuses/publish-status-detail/publish-status-detail').then(
+        (m) => m.PublishStatusDetail,
+      ),
+  },
+  {
+    path: 'publish-statuses/:id/edit',
+    loadComponent: () =>
+      import('./features/publish-statuses/publish-status-form/publish-status-form').then(
+        (m) => m.PublishStatusForm,
+      ),
+  },
+  {
+    path: 'partners',
+    loadComponent: () =>
+      import('./features/partners/partner-list/partner-list').then((m) => m.PartnerList),
+  },
+  {
+    path: 'partners/new',
+    loadComponent: () =>
+      import('./features/partners/partner-form/partner-form').then((m) => m.PartnerForm),
+  },
+  {
+    path: 'partners/:id',
+    loadComponent: () =>
+      import('./features/partners/partner-detail/partner-detail').then((m) => m.PartnerDetail),
+  },
+  {
+    path: 'partners/:id/edit',
+    loadComponent: () =>
+      import('./features/partners/partner-form/partner-form').then((m) => m.PartnerForm),
+  },
   { path: '**', redirectTo: 'app-roles' },
 ];
