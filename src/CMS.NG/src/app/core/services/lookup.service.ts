@@ -13,4 +13,9 @@ export class LookupService {
   getAppUsers(): Observable<LookupItem[]> {
     return this.http.get<LookupItem[]>(`${this.baseUrl}/app-users`);
   }
+
+  /** Partner options (value = pkid, label = Name). FK target for Course/Certification. */
+  getPartners(): Observable<LookupItem[]> {
+    return this.http.get<LookupItem[]>(`${this.baseUrl}/partners`);
+  }
 }

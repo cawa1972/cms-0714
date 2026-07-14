@@ -1,0 +1,17 @@
+:host {
+  display: block;
+}
+
+::ng-deep .full-width {
+  width: 100%;
+}
+
+::ng-deep .p-inputnumber.full-width input {
+  width: 100%;
+}
+
+.readonly-value {
+  padding: 8px 0;
+  font-weight: 500;
+  color: var(--text-color, #333);
+}
