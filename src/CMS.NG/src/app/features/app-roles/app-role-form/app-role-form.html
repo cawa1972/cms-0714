@@ -1,0 +1,72 @@
+<div class="page-toolbar">
+  <h1 class="page-title">{{ isEdit() ? '編輯角色' : '新增角色' }}</h1>
+  <span class="spacer"></span>
+  <p-button label="取消" icon="pi pi-times" severity="secondary" (onClick)="cancel()" />
+  <p-button label="儲存" icon="pi pi-check" severity="success" (onClick)="save()" [loading]="saving()" />
+</div>
+
+<form [formGroup]="form" (ngSubmit)="save()">
+  <div class="card">
+    <h2 class="card-title">角色資料</h2>
+
+    <div class="field">
+      <label for="roleId">角色代碼 <span class="required">*</span></label>
+      <input
+        id="roleId"
+        type="text"
+        pInputText
+        class="full-width"
+        placeholder="請輸入角色代碼"
+        formControlName="roleId"
+      />
+      @if (invalid('roleId')) {
+        <div class="field-error">角色代碼為必填。</div>
+      }
+    </div>
+
+    <div class="field">
+      <label for="roleName">角色名稱 <span class="required">*</span></label>
+      <input id="roleName" type="text" pInputText class="full-width" formControlName="roleName" />
+      @if (invalid('roleName')) {
+        <div class="field-error">角色名稱為必填。</div>
+      }
+    </div>
+
+    <div class="field">
+      <label for="permissionLevel">權限等級 <span class="required">*</span></label>
+      <p-inputNumber
+        inputId="permissionLevel"
+        styleClass="full-width"
+        formControlName="permissionLevel"
+        [useGrouping]="false"
+      />
+      @if (invalid('permissionLevel')) {
+        <div class="field-error">權限等級為必填。</div>
+      }
+    </div>
+
+    <div class="field">
+      <label for="description">描述 <span class="required">*</span></label>
+      <input id="description" type="text" pInputText class="full-width" formControlName="description" />
+      @if (invalid('description')) {
+        <div class="field-error">描述為必填。</div>
+      }
+    </div>
+  </div>
+
+  <div class="card">
+    <h2 class="card-title">使用者</h2>
+    <p-multiSelect
+      [options]="userOptions()"
+      formControlName="userIds"
+      optionLabel="label"
+      optionValue="value"
+      placeholder="選擇使用者（可複選）"
+      display="chip"
+      appendTo="body"
+      [filter]="true"
+      [maxSelectedLabels]="9999"
+      styleClass="full-width"
+    />
+  </div>
+</form>

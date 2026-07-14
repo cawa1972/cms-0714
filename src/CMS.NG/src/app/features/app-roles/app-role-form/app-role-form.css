@@ -1,0 +1,16 @@
+:host {
+  display: block;
+}
+
+::ng-deep .full-width {
+  width: 100%;
+}
+
+::ng-deep .p-inputnumber.full-width input {
+  width: 100%;
+}
+
+/* Wrap the n-n user chips instead of truncating. */
+::ng-deep .p-multiselect .p-multiselect-label {
+  white-space: normal;
+}

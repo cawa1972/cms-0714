@@ -1,0 +1,26 @@
+# ---- .NET ----
+[Bb]in/
+[Oo]bj/
+*.user
+*.suo
+.vs/
+
+# ---- Node / Angular ----
+node_modules/
+dist/
+.angular/
+*.log
+npm-debug.log*
+
+# ---- Test / coverage output ----
+[Tt]est[Rr]esults/
+coverage/
+
+# ---- IDE / OS ----
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# ---- Claude local settings (machine-specific) ----
+.claude/settings.local.json

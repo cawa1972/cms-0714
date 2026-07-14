@@ -1,0 +1,81 @@
+<div class="layout" [class.collapsed]="collapsed()">
+  <aside class="sidebar">
+    <div class="brand">
+      <span class="brand-logo"><i class="pi pi-th-large"></i></span>
+      <span class="brand-name" [hidden]="collapsed()">{{ title() }}</span>
+      <button type="button" class="brand-toggle" (click)="toggleSidebar()" aria-label="Toggle sidebar">
+        <i class="pi" [class.pi-angle-left]="!collapsed()" [class.pi-angle-right]="collapsed()"></i>
+      </button>
+    </div>
+
+    <nav class="nav">
+      @for (section of navSections(); track section.header) {
+        <div class="nav-section">
+          @if (!collapsed()) {
+            <div class="nav-section-header">{{ section.header }}</div>
+          }
+
+          @for (item of section.items; track item.label) {
+            @if (item.children?.length) {
+              <button
+                type="button"
+                class="nav-item parent"
+                [class.expanded]="item.expanded"
+                (click)="toggleItem(item)"
+              >
+                <i class="nav-icon" [ngClass]="item.icon"></i>
+                <span class="nav-label" [hidden]="collapsed()">{{ item.label }}</span>
+                @if (!collapsed()) {
+                  <i class="nav-caret pi pi-chevron-down"></i>
+                }
+              </button>
+
+              @if (item.expanded && !collapsed()) {
+                <div class="nav-children">
+                  @for (child of item.children; track child.label) {
+                    @if (child.route) {
+                      <a class="nav-item child" [routerLink]="child.route" routerLinkActive="active">
+                        <i class="nav-icon" [ngClass]="child.icon"></i>
+                        <span class="nav-label">{{ child.label }}</span>
+                      </a>
+                    } @else {
+                      <span class="nav-item child disabled">
+                        <i class="nav-icon" [ngClass]="child.icon"></i>
+                        <span class="nav-label">{{ child.label }}</span>
+                      </span>
+                    }
+                  }
+                </div>
+              }
+            } @else if (item.route) {
+              <a class="nav-item" [routerLink]="item.route" routerLinkActive="active">
+                <i class="nav-icon" [ngClass]="item.icon"></i>
+                <span class="nav-label" [hidden]="collapsed()">{{ item.label }}</span>
+              </a>
+            } @else {
+              <span class="nav-item disabled">
+                <i class="nav-icon" [ngClass]="item.icon"></i>
+                <span class="nav-label" [hidden]="collapsed()">{{ item.label }}</span>
+              </span>
+            }
+          }
+        </div>
+      }
+    </nav>
+
+    <div class="sidebar-user">
+      <span class="user-avatar"><i class="pi pi-user"></i></span>
+      <div class="user-meta" [hidden]="collapsed()">
+        <div class="user-name">管理員</div>
+        <div class="user-role">Administrator</div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="content">
+    <router-outlet />
+  </main>
+</div>
+
+<p-toast />
+<p-confirmdialog />
