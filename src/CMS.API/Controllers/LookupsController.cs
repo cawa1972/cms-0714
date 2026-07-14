@@ -26,4 +26,9 @@ public class LookupsController : ControllerBase
     [HttpGet("partners")]
     public async Task<ActionResult<IEnumerable<LookupItem>>> GetPartners()
         => Ok(await _repository.GetPartnersAsync());
+
+    /// <summary>CourseGroup options (value = pkid, label = Description). FK target for Course / PartnerCourseGroup.</summary>
+    [HttpGet("course-groups")]
+    public async Task<ActionResult<IEnumerable<LookupItem>>> GetCourseGroups()
+        => Ok(await _repository.GetCourseGroupsAsync());
 }

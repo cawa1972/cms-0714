@@ -36,7 +36,10 @@ export class App {
           label: '課程管理 Course',
           icon: 'pi pi-book',
           expanded: true,
-          children: [{ label: '合作廠商 Partner', icon: 'pi pi-building', route: '/partners' }],
+          children: [
+            { label: '合作廠商 Partner', icon: 'pi pi-building', route: '/partners' },
+            { label: '課程分類 CourseGroup', icon: 'pi pi-sitemap', route: '/course-groups' },
+          ],
         },
         { label: '說明會 Seminar', icon: 'pi pi-comments' },
         { label: '活動管理 Promotion', icon: 'pi pi-megaphone' },

@@ -1,0 +1,12 @@
+:host {
+  display: block;
+}
+
+::ng-deep .full-width {
+  width: 100%;
+}
+
+.readonly-value {
+  padding: 8px 0;
+  color: var(--p-text-muted-color, #6b7280);
+}
