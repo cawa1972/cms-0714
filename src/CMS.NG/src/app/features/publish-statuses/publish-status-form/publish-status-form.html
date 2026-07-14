@@ -1,0 +1,51 @@
+<div class="page-toolbar">
+  <h1 class="page-title">{{ isEdit() ? '編輯發布狀態' : '新增發布狀態' }}</h1>
+  <span class="spacer"></span>
+  <p-button label="取消" icon="pi pi-times" severity="secondary" (onClick)="cancel()" />
+  <p-button label="儲存" icon="pi pi-check" severity="success" (onClick)="save()" [loading]="saving()" />
+</div>
+
+<form [formGroup]="form" (ngSubmit)="save()">
+  <div class="card">
+    <h2 class="card-title">發布狀態資料</h2>
+
+    <div class="field">
+      <label for="pkid">主代碼 <span class="required">*</span></label>
+      <p-inputNumber
+        inputId="pkid"
+        styleClass="full-width"
+        formControlName="pkid"
+        [useGrouping]="false"
+        [min]="0"
+        [max]="255"
+        placeholder="0–255（新增後不可修改）"
+      />
+      @if (invalid('pkid')) {
+        <div class="field-error">主代碼為必填，範圍 0–255。</div>
+      }
+    </div>
+
+    <div class="field">
+      <label for="description">狀態說明 <span class="required">*</span></label>
+      <input id="description" type="text" pInputText class="full-width" maxlength="50" formControlName="description" />
+      @if (invalid('description')) {
+        <div class="field-error">狀態說明為必填。</div>
+      }
+    </div>
+
+    <div class="field-check">
+      <p-checkbox inputId="isDraft" formControlName="isDraft" [binary]="true" />
+      <label for="isDraft">草稿</label>
+    </div>
+
+    <div class="field-check">
+      <p-checkbox inputId="isPublished" formControlName="isPublished" [binary]="true" />
+      <label for="isPublished">已發布</label>
+    </div>
+
+    <div class="field-check">
+      <p-checkbox inputId="isDiscontinued" formControlName="isDiscontinued" [binary]="true" />
+      <label for="isDiscontinued">已停用</label>
+    </div>
+  </div>
+</form>

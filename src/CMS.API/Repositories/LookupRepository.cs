@@ -20,4 +20,15 @@ public sealed class LookupRepository : ILookupRepository
             ORDER BY UserName ASC
             """);
     }
+
+    public async Task<IEnumerable<LookupItem>> GetPublishStatusesAsync()
+    {
+        using var db = _factory.Create();
+        return await db.QueryAsync<LookupItem>("""
+            SELECT CAST(pkid AS varchar(3)) AS Value,
+                   Description AS Label
+            FROM PublishStatus
+            ORDER BY pkid ASC
+            """);
+    }
 }

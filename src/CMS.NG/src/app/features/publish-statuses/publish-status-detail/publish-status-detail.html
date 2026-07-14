@@ -1,0 +1,41 @@
+<div class="page-toolbar">
+  <h1 class="page-title">檢視發布狀態</h1>
+  <span class="spacer"></span>
+  <p-button label="返回" icon="pi pi-arrow-left" severity="secondary" (onClick)="back()" />
+  <p-button label="編輯" icon="pi pi-pencil" (onClick)="edit()" [disabled]="!status()" />
+</div>
+
+@if (status(); as s) {
+  <div class="card">
+    <h2 class="card-title">發布狀態資料</h2>
+
+    <div class="detail-row">
+      <div class="detail-label">主代碼</div>
+      <div class="detail-value">{{ s.pkid }}</div>
+    </div>
+    <div class="detail-row">
+      <div class="detail-label">狀態說明</div>
+      <div class="detail-value">{{ s.description }}</div>
+    </div>
+    <div class="detail-row">
+      <div class="detail-label">草稿</div>
+      <div class="detail-value">
+        <p-tag [value]="s.isDraft ? '是' : '否'" [severity]="s.isDraft ? 'info' : 'secondary'" />
+      </div>
+    </div>
+    <div class="detail-row">
+      <div class="detail-label">已發布</div>
+      <div class="detail-value">
+        <p-tag [value]="s.isPublished ? '是' : '否'" [severity]="s.isPublished ? 'success' : 'secondary'" />
+      </div>
+    </div>
+    <div class="detail-row">
+      <div class="detail-label">已停用</div>
+      <div class="detail-value">
+        <p-tag [value]="s.isDiscontinued ? '是' : '否'" [severity]="s.isDiscontinued ? 'danger' : 'secondary'" />
+      </div>
+    </div>
+  </div>
+} @else if (!loading()) {
+  <div class="card text-muted">找不到發布狀態資料。</div>
+}
