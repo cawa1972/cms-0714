@@ -1,0 +1,137 @@
+:host {
+  display: block;
+}
+
+/* ---- TrainingCenter tabs ---- */
+.center-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 2px solid #e2e8f0;
+  margin-bottom: 12px;
+}
+
+.center-tab {
+  border: 1px solid #e2e8f0;
+  border-bottom: none;
+  border-radius: 6px 6px 0 0;
+  background: #f8fafc;
+  color: #475569;
+  padding: 8px 18px;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.center-tab.active {
+  background: #fff;
+  color: #047857;
+  font-weight: 700;
+  border-color: #047857;
+  border-bottom: 2px solid #fff;
+  margin-bottom: -2px;
+}
+
+/* ---- Week navigation ---- */
+.week-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.week-label {
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: #0f172a;
+  min-width: 10rem;
+  text-align: center;
+}
+
+/* ---- Day sections ---- */
+.day-header {
+  background: #e2e8f0;
+  color: #0f172a;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 4px;
+  margin: 12px 0 4px;
+}
+
+.slot-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 4px;
+  border-bottom: 1px dashed #f1f5f9;
+}
+
+.slot-row.empty .cell-text {
+  background: #f8fafc;
+}
+
+.slot-no {
+  flex: 0 0 1.2rem;
+  text-align: right;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.slot-actions {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+}
+
+.cell-text {
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  padding: 4px 10px;
+  min-height: 1.9rem;
+  font-size: 0.9rem;
+  color: #0f172a;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cell-text.promo {
+  flex: 0 0 16rem;
+}
+
+.cell-text.topic {
+  flex: 1 1 0;
+}
+
+.cell-text.desc {
+  flex: 2 1 0;
+}
+
+/* ---- Inline editor ---- */
+.slot-editor {
+  border: 2px solid #0f172a;
+  border-radius: 6px;
+  padding: 16px;
+  margin: 6px 0;
+  background: #fff;
+}
+
+.promo-row {
+  display: flex;
+  gap: 8px;
+}
+
+.promo-row input {
+  flex: 1 1 0;
+}
+
+.promo-hint {
+  color: #047857;
+  font-size: 0.85rem;
+  margin-top: 4px;
+}
+
+.editor-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}

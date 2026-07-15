@@ -36,4 +36,9 @@ public class LookupsController : ControllerBase
     [HttpGet("course-groups")]
     public async Task<ActionResult<IEnumerable<LookupItem>>> GetCourseGroups()
         => Ok(await _repository.GetCourseGroupsAsync());
+
+    /// <summary>TrainingCenter options (value = pkid, label = Name). Tabs on the FeaturedPromoItem board.</summary>
+    [HttpGet("training-centers")]
+    public async Task<ActionResult<IEnumerable<LookupItem>>> GetTrainingCenters()
+        => Ok(await _repository.GetTrainingCentersAsync());
 }

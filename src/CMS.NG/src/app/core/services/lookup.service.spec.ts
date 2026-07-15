@@ -28,4 +28,17 @@ describe('LookupService', () => {
     expect(req.request.method).toBe('GET');
     req.flush([{ value: 'helen', label: 'helen (helen)' }]);
   });
+
+  it('getTrainingCenters issues GET /lookups/training-centers', () => {
+    service.getTrainingCenters().subscribe((items) => {
+      expect(items.length).toBe(2);
+      expect(items[0].label).toBe('台北');
+    });
+    const req = httpMock.expectOne(`${environment.apiBaseUrl}/lookups/training-centers`);
+    expect(req.request.method).toBe('GET');
+    req.flush([
+      { value: '1', label: '台北' },
+      { value: '2', label: '台中' },
+    ]);
+  });
 });

@@ -64,4 +64,15 @@ public sealed class LookupRepository : ILookupRepository
             ORDER BY pkid ASC
             """);
     }
+
+    public async Task<IEnumerable<LookupItem>> GetTrainingCentersAsync()
+    {
+        using var db = _factory.Create();
+        return await db.QueryAsync<LookupItem>("""
+            SELECT CAST(pkid AS varchar(6)) AS Value,
+                   Name AS Label
+            FROM TrainingCenter
+            ORDER BY DisplayOrder ASC
+            """);
+    }
 }
