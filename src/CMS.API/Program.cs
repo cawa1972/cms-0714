@@ -1,6 +1,12 @@
+using System.Text;
 using CMS.API.Data;
 using CMS.API.Repositories;
+using CMS.API.Security;
 using Dapper;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc.Authorization;
+using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,7 +16,15 @@ SqlMapper.AddTypeHandler(new TimeOnlyTypeHandler());
 
 const string CorsPolicy = "LocalhostCors";
 
-builder.Services.AddControllers();
+// Require an authenticated user for every endpoint by default; AuthController opts out with
+// [AllowAnonymous].
+builder.Services.AddControllers(options =>
+{
+    var requireAuth = new AuthorizationPolicyBuilder()
+        .RequireAuthenticatedUser()
+        .Build();
+    options.Filters.Add(new AuthorizeFilter(requireAuth));
+});
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
@@ -35,6 +49,41 @@ builder.Services.AddScoped<ICourseGroupRepository, CourseGroupRepository>();
 builder.Services.AddScoped<ICourseRepository, CourseRepository>();
 builder.Services.AddScoped<IFeaturedPromoItemRepository, FeaturedPromoItemRepository>();
 builder.Services.AddScoped<ILookupRepository, LookupRepository>();
+builder.Services.AddScoped<IAuthRepository, AuthRepository>();
+
+// Token issuance + the shared signing key (SysConfig 'appConfig'.symmetricSecurityKey) that both
+// issues and validates JWTs.
+builder.Services.AddSingleton<IJwtTokenService, JwtTokenService>();
+builder.Services.AddSingleton<ISigningKeyProvider, SysConfigSigningKeyProvider>();
+
+// JWT bearer authentication. The signing key is resolved at validation time from ISigningKeyProvider
+// so it stays in lock-step with the key AuthController signs tokens with.
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer();
+
+builder.Services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme)
+    .Configure<ISigningKeyProvider>((options, keyProvider) =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = false,
+            ValidateAudience = false,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            // Resolved per-validation (lazily, once the DB is reachable) rather than at startup.
+            IssuerSigningKeyResolver = (_, _, _, _) =>
+            {
+                var key = keyProvider.GetSigningKey();
+                return string.IsNullOrWhiteSpace(key)
+                    ? []
+                    : [new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key))];
+            },
+            NameClaimType = JwtClaims.UserId,
+            RoleClaimType = JwtClaims.Role,
+        };
+    });
+
+builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
@@ -45,6 +94,10 @@ app.UseSwaggerUI(options =>
 });
 
 app.UseCors(CorsPolicy);
+
+app.UseAuthentication();
+app.UseAuthorization();
+
 app.MapControllers();
 
 app.Run();

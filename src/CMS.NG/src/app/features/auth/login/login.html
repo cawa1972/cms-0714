@@ -1,0 +1,49 @@
+<div class="login-page">
+  <form class="login-card" [formGroup]="form" (ngSubmit)="submit()">
+    <div class="login-brand">
+      <span class="brand-logo"><i class="pi pi-th-large"></i></span>
+      <span class="brand-name">CMS</span>
+    </div>
+
+    <h1 class="login-title">登入 Login</h1>
+
+    <div class="field">
+      <label for="userId">使用者代碼 UserId</label>
+      <input
+        id="userId"
+        type="text"
+        pInputText
+        class="full-width"
+        autocomplete="username"
+        formControlName="userId"
+      />
+      @if (invalid('userId')) {
+        <div class="field-error">請輸入使用者代碼。</div>
+      }
+    </div>
+
+    <div class="field">
+      <label for="password">密碼 Password</label>
+      <p-password
+        inputId="password"
+        formControlName="password"
+        [feedback]="false"
+        [toggleMask]="true"
+        styleClass="full-width"
+        inputStyleClass="full-width"
+        autocomplete="current-password"
+      />
+      @if (invalid('password')) {
+        <div class="field-error">請輸入密碼。</div>
+      }
+    </div>
+
+    <p-button
+      type="submit"
+      label="登入"
+      icon="pi pi-sign-in"
+      styleClass="full-width login-submit"
+      [loading]="submitting()"
+    />
+  </form>
+</div>
