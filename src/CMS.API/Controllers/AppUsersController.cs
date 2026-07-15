@@ -6,8 +6,16 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace CMS.API.Controllers;
 
+/// <summary>
+/// User management — <b>Admin only, controller-wide</b>: every action (list, query, get, create,
+/// update, delete, reset-password) requires the Admin role claim, enforced here and not merely
+/// hidden in the UI. Non-Admin authenticated callers get 403; unauthenticated callers get 401 from
+/// the global filter as usual. Self-service profile/password changes live in AuthController and
+/// stay open to every signed-in user.
+/// </summary>
 [ApiController]
 [Route("api/app-users")]
+[Authorize(Roles = AppRoles.Admin)]
 public class AppUsersController : ControllerBase
 {
     private readonly IAppUserRepository _repository;
@@ -74,11 +82,9 @@ public class AppUsersController : ControllerBase
 
     /// <summary>
     /// Reset the user's password back to the SysConfig default (re-hashed) and stamp
-    /// PasswordUpdatedTime. <b>Admin only</b> — enforced here by role claim, not just hidden in the
-    /// UI: a non-Admin caller gets 403. 204 on success (never any password or hash in the response),
-    /// 404 if the user does not exist.
+    /// PasswordUpdatedTime. Admin only via the controller-level role attribute. 204 on success
+    /// (never any password or hash in the response), 404 if the user does not exist.
     /// </summary>
-    [Authorize(Roles = AppRoles.Admin)]
     [HttpPost("{id}/reset-password")]
     public async Task<IActionResult> ResetPassword(string id)
     {

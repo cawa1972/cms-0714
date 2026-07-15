@@ -1,11 +1,19 @@
 using CMS.API.Models;
 using CMS.API.Repositories;
+using CMS.API.Security;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CMS.API.Controllers;
 
+/// <summary>
+/// PublishStatus management — <b>Admin only, controller-wide</b>: these are system-wide lifecycle
+/// definitions, so every action requires the Admin role claim. Non-Admins get 403; the dropdown
+/// *options* Course pages need come from the unrestricted LookupsController instead.
+/// </summary>
 [ApiController]
 [Route("api/publish-statuses")]
+[Authorize(Roles = AppRoles.Admin)]
 public class PublishStatusesController : ControllerBase
 {
     private readonly IPublishStatusRepository _repository;

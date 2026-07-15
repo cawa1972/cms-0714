@@ -1,11 +1,19 @@
 using CMS.API.Models;
 using CMS.API.Repositories;
+using CMS.API.Security;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CMS.API.Controllers;
 
+/// <summary>
+/// Role management — <b>Admin only, controller-wide</b>: role membership grants privileges (a role
+/// update syncs AppUserRole links), so every action requires the Admin role claim. Non-Admins get
+/// 403; the role *options* for pickers come from the unrestricted LookupsController instead.
+/// </summary>
 [ApiController]
 [Route("api/app-roles")]
+[Authorize(Roles = AppRoles.Admin)]
 public class AppRolesController : ControllerBase
 {
     private readonly IAppRoleRepository _repository;
