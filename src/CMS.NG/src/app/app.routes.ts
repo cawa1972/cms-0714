@@ -1,6 +1,23 @@
 import { Routes } from '@angular/router';
+import { authGuard } from '@core/guards/auth.guard';
 
 export const routes: Routes = [
+  {
+    path: 'login',
+    loadComponent: () => import('./features/auth/login/login').then((m) => m.Login),
+  },
+  {
+    path: '',
+    loadComponent: () => import('./layout/shell/shell').then((m) => m.Shell),
+    canActivate: [authGuard],
+    children: appRoutes(),
+  },
+  { path: '**', redirectTo: '' },
+];
+
+// The authenticated feature routes, rendered inside the Shell's outlet.
+function appRoutes(): Routes {
+  return [
   { path: '', redirectTo: 'app-roles', pathMatch: 'full' },
   {
     path: 'featured-promo-items',
@@ -145,5 +162,6 @@ export const routes: Routes = [
         (m) => m.CourseGroupForm,
       ),
   },
-  { path: '**', redirectTo: 'app-roles' },
-];
+    { path: '**', redirectTo: 'app-roles' },
+  ];
+}

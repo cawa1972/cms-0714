@@ -1,0 +1,31 @@
+using CMS.API.Data;
+using CMS.API.Models;
+using Dapper;
+
+namespace CMS.API.Repositories;
+
+public sealed class AuthRepository : IAuthRepository
+{
+    private readonly ISqlConnectionFactory _factory;
+
+    public AuthRepository(ISqlConnectionFactory factory) => _factory = factory;
+
+    public async Task<AppUserCredential?> GetCredentialAsync(string userId)
+    {
+        using var db = _factory.Create();
+
+        var credential = await db.QuerySingleOrDefaultAsync<AppUserCredential>("""
+            SELECT u.UserId, u.UserName, u.IsActive, u.PasswordHash
+            FROM AppUser u
+            WHERE u.UserId = @userId
+            """, new { userId });
+
+        if (credential is null)
+            return null;
+
+        var roleIds = await db.QueryAsync<string>(
+            "SELECT RoleId FROM AppUserRole WHERE UserId = @userId ORDER BY RoleId", new { userId });
+        credential.RoleIds = roleIds.ToList();
+        return credential;
+    }
+}

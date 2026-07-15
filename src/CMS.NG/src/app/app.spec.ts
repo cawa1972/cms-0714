@@ -17,18 +17,10 @@ describe('App', () => {
     expect(fixture.componentInstance).toBeTruthy();
   });
 
-  it('renders the brand title', () => {
+  it('hosts a router outlet', () => {
     const fixture = TestBed.createComponent(App);
     fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('.brand-name')?.textContent).toContain('CMS');
-  });
-
-  it('renders the 系統管理 Admin nav group with the AppRole item', () => {
-    const fixture = TestBed.createComponent(App);
-    fixture.detectChanges();
-    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
-    expect(text).toContain('系統管理 Admin');
-    expect(text).toContain('角色 AppRole');
+    expect(compiled.querySelector('router-outlet')).not.toBeNull();
   });
 });

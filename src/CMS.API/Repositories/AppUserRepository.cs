@@ -1,9 +1,8 @@
 using System.Data;
-using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json;
 using CMS.API.Data;
 using CMS.API.Models;
+using CMS.API.Security;
 using Dapper;
 
 namespace CMS.API.Repositories;
@@ -194,13 +193,6 @@ public sealed class AppUserRepository : IAppUserRepository
             throw new InvalidOperationException("SysConfig 'appConfig' has no 'defaultPassword' property.");
         }
 
-        return HashPassword(defaultPassword);
-    }
-
-    /// <summary>SHA-256 of the UTF-8 bytes of <paramref name="plainText"/>, as lowercase hex.</summary>
-    private static string HashPassword(string plainText)
-    {
-        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(plainText));
-        return Convert.ToHexStringLower(bytes);
+        return PasswordHasher.Hash(defaultPassword);
     }
 }
