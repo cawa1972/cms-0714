@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { forkJoin, of } from 'rxjs';
@@ -7,11 +7,12 @@ import { InputTextModule } from 'primeng/inputtext';
 import { CheckboxModule } from 'primeng/checkbox';
 import { MultiSelectModule } from 'primeng/multiselect';
 import { ButtonModule } from 'primeng/button';
-import { MessageService } from 'primeng/api';
+import { ConfirmationService, MessageService } from 'primeng/api';
 
 import { AppUserRequest } from '@core/models/app-user.model';
 import { LookupItem } from '@core/models/app-role.model';
 import { AppUserService } from '@core/services/app-user.service';
+import { AuthService } from '@core/services/auth.service';
 import { LookupService } from '@core/services/lookup.service';
 
 @Component({
@@ -31,13 +32,19 @@ export class AppUserForm implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly service = inject(AppUserService);
+  private readonly auth = inject(AuthService);
   private readonly lookups = inject(LookupService);
+  private readonly confirm = inject(ConfirmationService);
   private readonly messages = inject(MessageService);
 
   protected readonly isEdit = signal(false);
   protected readonly loading = signal(true);
   protected readonly saving = signal(false);
+  protected readonly resetting = signal(false);
   protected readonly roleOptions = signal<LookupItem[]>([]);
+
+  /** Gates the reset-password action; the backend enforces the same role with 403. */
+  protected readonly isAdmin = computed(() => this.auth.hasRole('Admin'));
 
   protected readonly form = this.fb.group({
     userId: ['', [Validators.required, Validators.maxLength(200)]],
@@ -105,6 +112,40 @@ export class AppUserForm implements OnInit {
             ? `使用者代碼「${request.userId}」已存在。`
             : '儲存時發生錯誤。';
         this.messages.add({ severity: 'error', summary: '儲存失敗', detail });
+      },
+    });
+  }
+
+  /**
+   * Reset the edited user's password to the system default (Admin only — the backend enforces the
+   * role with 403). Sends only the UserId; no password or hash ever crosses the wire.
+   */
+  resetPassword(event: Event): void {
+    if (!this.isEdit() || !this.userId) {
+      return;
+    }
+    const targetId = this.userId;
+    this.confirm.confirm({
+      target: event.target as EventTarget,
+      header: '重設密碼確認',
+      message: `確定要將使用者「${targetId}」的密碼重設為系統預設值？`,
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: '重設',
+      rejectLabel: '取消',
+      accept: () => {
+        this.resetting.set(true);
+        this.service.resetPassword(targetId).subscribe({
+          next: () => {
+            this.resetting.set(false);
+            this.messages.add({ severity: 'success', summary: '已重設', detail: '密碼已重設為系統預設值。' });
+          },
+          error: (err: HttpErrorResponse) => {
+            this.resetting.set(false);
+            const detail =
+              err.status === 403 ? '僅系統管理員可重設密碼。' : '重設密碼時發生錯誤。';
+            this.messages.add({ severity: 'error', summary: '重設失敗', detail });
+          },
+        });
       },
     });
   }

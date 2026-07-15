@@ -146,11 +146,13 @@ later if needed).
 | `POST` | `/api/app-users` | Create. 409 if `UserId` already exists. Sets `PasswordHash` from SysConfig default. |
 | `PUT` | `/api/app-users` | Update (`UserId` from body). Does **not** touch `PasswordHash`. 404 if not found. |
 | `DELETE` | `/api/app-users/{id}` | Delete (removes `AppUserRole` rows first, then the user) |
-| `POST` | `/api/app-users/{id}/reset-password` | **Special.** Re-reads the SysConfig default password, SHA-256 hashes it, writes `PasswordHash` + stamps `PasswordUpdatedTime`. Returns 204, or 404 if the user does not exist. |
+| `POST` | `/api/app-users/{id}/reset-password` | **Special. Admin only** (`[Authorize(Roles = AppRoles.Admin)]` — enforced by role claim, 403 for authenticated non-Admins). Re-reads the SysConfig default password at runtime, SHA-256 hashes it, writes `PasswordHash` + stamps `PasswordUpdatedTime`. Returns 204 (never any password/hash in the response), or 404 if the user does not exist. |
 
 - String PK: controller route `{id}` (no `:int` constraint); the Angular service wraps the id in
   `encodeURIComponent`.
-- No auth attributes in this repo (consistent with the other features); noted as a future concern.
+- Endpoints require an authenticated user via the global filter (see `Auth.md`); reset-password
+  additionally requires the **Admin** role. The Angular reset buttons (detail page + edit form) are
+  shown only to Admins (`auth.hasRole('Admin')`), but the backend check is the enforcement.
 
 ---
 

@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { forkJoin } from 'rxjs';
@@ -9,6 +9,7 @@ import { ConfirmationService, MessageService } from 'primeng/api';
 import { AppUser } from '@core/models/app-user.model';
 import { LookupItem } from '@core/models/app-role.model';
 import { AppUserService } from '@core/services/app-user.service';
+import { AuthService } from '@core/services/auth.service';
 import { LookupService } from '@core/services/lookup.service';
 
 @Component({
@@ -21,6 +22,7 @@ export class AppUserDetail implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly service = inject(AppUserService);
+  private readonly auth = inject(AuthService);
   private readonly lookups = inject(LookupService);
   private readonly confirm = inject(ConfirmationService);
   private readonly messages = inject(MessageService);
@@ -29,6 +31,9 @@ export class AppUserDetail implements OnInit {
   protected readonly roleLabels = signal<string[]>([]);
   protected readonly loading = signal(true);
   protected readonly resetting = signal(false);
+
+  /** Gates the reset-password action; the backend enforces the same role with 403. */
+  protected readonly isAdmin = computed(() => this.auth.hasRole('Admin'));
 
   private userId!: string;
 

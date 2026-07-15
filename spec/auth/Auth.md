@@ -129,6 +129,16 @@ Applied **globally, then relaxed on Auth** — the reverse of decorating every c
 - Any request to a protected endpoint without a valid `Authorization: Bearer <token>` header returns
   **401** (missing, malformed, wrong-signature, or expired token all 401).
 
+### Role-based authorization
+
+Endpoints that need more than "any authenticated user" add `[Authorize(Roles = AppRoles.Admin)]`
+(role-name constants live in `Security/AppRoles`). The JWT's `role` claims drive this because
+`TokenValidationParameters.RoleClaimType = JwtClaims.Role` — **and** `options.MapInboundClaims =
+false` on the bearer options. Without the latter, the handler silently rewrites incoming `role`
+claims to the legacy `ClaimTypes.Role` URI and `[Authorize(Roles = …)]` never matches (every caller
+gets 403). An authenticated caller lacking the role gets **403**; the example is the Admin-only
+`POST /api/app-users/{id}/reset-password` (see `AppUser.md`).
+
 ### Program.cs wiring (order matters)
 
 ```csharp

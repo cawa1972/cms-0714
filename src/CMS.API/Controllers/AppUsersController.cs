@@ -1,5 +1,7 @@
 using CMS.API.Models;
 using CMS.API.Repositories;
+using CMS.API.Security;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CMS.API.Controllers;
@@ -71,9 +73,12 @@ public class AppUsersController : ControllerBase
     }
 
     /// <summary>
-    /// Reset the user's password back to the SysConfig default (re-hashed). 204 on success,
+    /// Reset the user's password back to the SysConfig default (re-hashed) and stamp
+    /// PasswordUpdatedTime. <b>Admin only</b> — enforced here by role claim, not just hidden in the
+    /// UI: a non-Admin caller gets 403. 204 on success (never any password or hash in the response),
     /// 404 if the user does not exist.
     /// </summary>
+    [Authorize(Roles = AppRoles.Admin)]
     [HttpPost("{id}/reset-password")]
     public async Task<IActionResult> ResetPassword(string id)
     {

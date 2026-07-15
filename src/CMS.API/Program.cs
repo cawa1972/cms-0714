@@ -64,6 +64,10 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme)
     .Configure<ISigningKeyProvider>((options, keyProvider) =>
     {
+        // Keep the raw claim names ("role", "userId") — without this the handler rewrites "role" to
+        // the legacy ClaimTypes.Role URI and [Authorize(Roles = …)] / RoleClaimType never match.
+        options.MapInboundClaims = false;
+
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = false,

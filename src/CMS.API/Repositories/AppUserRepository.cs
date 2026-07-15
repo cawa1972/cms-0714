@@ -177,12 +177,23 @@ public sealed class AppUserRepository : IAppUserRepository
     /// <summary>
     /// Reads the default password from <c>SysConfig</c> (configKey = 'appConfig', a JSON blob whose
     /// <c>defaultPassword</c> property holds the value) and returns its SHA-256 hash (lowercase hex).
+    /// The value is read at runtime on every reset/create — never cached, never hard-coded.
     /// </summary>
     private static async Task<string> GetDefaultPasswordHashAsync(IDbConnection db, IDbTransaction tx)
     {
         var configValue = await db.ExecuteScalarAsync<string?>(
             "SELECT configValue FROM SysConfig WHERE configKey = 'appConfig'", transaction: tx);
 
+        return ResolveDefaultPasswordHash(configValue);
+    }
+
+    /// <summary>
+    /// Pure part of the default-password resolution, split from the DB read so it is unit-testable:
+    /// parses the SysConfig 'appConfig' JSON, extracts <c>defaultPassword</c>, and returns
+    /// <c>SHA256(defaultPassword)</c> (lowercase hex). Throws on missing config or property.
+    /// </summary>
+    public static string ResolveDefaultPasswordHash(string? configValue)
+    {
         if (string.IsNullOrWhiteSpace(configValue))
             throw new InvalidOperationException("SysConfig 'appConfig' is missing; cannot resolve the default password.");
 
