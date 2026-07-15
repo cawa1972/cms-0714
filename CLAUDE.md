@@ -36,6 +36,20 @@ global.json         pins the .NET 9 SDK (9.0.314)
 - Tokens are HS256, signed with the `symmetricSecurityKey` from `SysConfig` (`configKey='appConfig'`), read via `ISigningKeyProvider` — the **same key issues and validates**. Never hard-code it. Auth code lives in `CMS.API/Security/`.
 - A backend test that calls a protected endpoint needs a bearer token (see `AuthorizationIntegrationTests`, which fakes the repo + signing key). The Angular app stores the profile in **session** storage (`cms.auth`, never local storage) and attaches the token via an HTTP interceptor; routes sit behind a guard. Detail: `spec/auth/Auth.md`.
 
+## gstack
+
+Use the `/browse` skill from gstack for **all** web browsing. Never use the
+`mcp__claude-in-chrome__*` tools.
+
+Available gstack skills: `/office-hours`, `/plan-ceo-review`, `/plan-eng-review`,
+`/plan-design-review`, `/design-consultation`, `/design-shotgun`, `/design-html`,
+`/review`, `/ship`, `/land-and-deploy`, `/canary`, `/benchmark`, `/browse`,
+`/connect-chrome`, `/qa`, `/qa-only`, `/design-review`, `/setup-browser-cookies`,
+`/setup-deploy`, `/setup-gbrain`, `/retro`, `/investigate`, `/document-release`,
+`/document-generate`, `/codex`, `/cso`, `/autoplan`, `/plan-devex-review`,
+`/devex-review`, `/careful`, `/freeze`, `/guard`, `/unfreeze`, `/gstack-upgrade`,
+`/learn`.
+
 ## Version pins (do not casually bump)
 
 - **.NET 9**, not 10 — the .NET 10 SDK is also installed; `global.json` forces 9.0.314; projects target `net9.0`.
