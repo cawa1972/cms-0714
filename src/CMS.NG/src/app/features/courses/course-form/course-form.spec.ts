@@ -80,6 +80,25 @@ function setup(routeId: string | null) {
   return { fixture, component: fixture.componentInstance, serviceSpy, routerSpy };
 }
 
+/** Asserts the action toolbar is rendered pinned (sticky) with Save + Cancel present. */
+function expectStickyToolbarWithActions(fixture: ComponentFixture<CourseForm>) {
+  const host: HTMLElement = fixture.nativeElement;
+
+  const toolbar = host.querySelector<HTMLElement>('.page-toolbar');
+  expect(toolbar).withContext('action toolbar renders').not.toBeNull();
+
+  // Pinned/stuck styling comes from the component stylesheet.
+  const style = getComputedStyle(toolbar!);
+  expect(style.position).withContext('toolbar is sticky').toBe('sticky');
+  expect(style.top).withContext('toolbar pins to the top').toBe('0px');
+
+  // Save + Cancel remain in the toolbar.
+  const buttons = toolbar!.querySelectorAll('p-button');
+  expect(buttons.length).withContext('Save + Cancel buttons present').toBe(2);
+  expect(toolbar!.textContent).toContain('儲存');
+  expect(toolbar!.textContent).toContain('取消');
+}
+
 describe('CourseForm (add mode)', () => {
   afterEach(() => TestBed.resetTestingModule());
 
@@ -88,6 +107,11 @@ describe('CourseForm (add mode)', () => {
     expect(component['isEdit']()).toBeFalse();
     expect(component['pkid']()).toBeNull();
     expect(component['partnerOptions']().length).toBe(2);
+  });
+
+  it('renders the sticky action toolbar with Save + Cancel', () => {
+    const { fixture } = setup(null);
+    expectStickyToolbarWithActions(fixture);
   });
 
   it('does not save an invalid (empty) form', () => {
@@ -140,6 +164,11 @@ describe('CourseForm (edit mode)', () => {
     expect(component['pkid']()).toBe(2);
     expect(component['form'].controls.title.value).toBe('AWS 架構師');
     expect(component['form'].controls.scheduleOn.value instanceof Date).toBeTrue();
+  });
+
+  it('renders the sticky action toolbar with Save + Cancel', () => {
+    const { fixture } = setup('2');
+    expectStickyToolbarWithActions(fixture);
   });
 
   it('updates the course on save (pkid carried from the route)', () => {

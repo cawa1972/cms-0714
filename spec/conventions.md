@@ -44,6 +44,14 @@ session. For scaffolding-specific patterns see `code-gen.convention.md`; for per
   `min` / `max` / decimal precision matched to the DB column type (see `NUMBER_FIELD_CONFIG`),
   enforced in both the editor and the validator. **See the overlay-editor gotcha below.**
 - **Form pages:** reactive forms, `forkJoin` for parallel lookups on init, `p-multiselect` for N-N.
+- **Sticky form toolbar** (reference: `features/courses/course-form`): to freeze the Save/Cancel
+  action toolbar while the form body scrolls, make the component **host** the scroll region
+  (`:host { height: calc(100vh - 32px); overflow-y: auto }` — the `32px` is `.content`'s 16px
+  top+bottom padding) and pin `.page-toolbar` with `position: sticky; top: 0; z-index`. The toolbar
+  and `<form>` are already direct children of the host, so no template change is needed; the toolbar
+  keeps its opaque background + shadow (`styles.css`) so fields scroll cleanly underneath. Confine
+  this to the form's `:host` — don't make the shared `.page-toolbar` sticky globally. **See the
+  `.content` overflow gotcha below** for why the host (not the window) must own the scroll.
 - **Dates:** display API `datetime` values by appending `'Z'` to the ISO string before formatting
   (Dapper returns `Kind=Unspecified`). For `date` columns use `core/utils/date.util.ts`.
 
@@ -54,6 +62,13 @@ session. For scaffolding-specific patterns see `code-gen.convention.md`; for per
   API itself round-trips UTF-8 correctly (verified end-to-end against the live DB).
 - **Connection string** is in `src/CMS.API/appsettings.json` (`.\SQLEXPRESS`, database `CMS`,
   Trusted_Connection). Trust cert / no encrypt for local dev.
+- **`.content` (`app.css`) is the window's scroll owner, not an internal scroll box.** It sets
+  `overflow-x: hidden`, which by spec forces `overflow-y` to compute to `auto` — so any descendant
+  `position: sticky` is measured against `.content`, which grows with its content and never scrolls
+  internally (the window scrolls). A naive sticky element therefore just scrolls away. To pin
+  something, give it a bounded, actually-scrolling ancestor (e.g. the sticky-form-toolbar pattern
+  makes the component `:host` the scroll region). PrimeNG overlays already dodge `.content`'s clip
+  via `appendTo="body"`.
 - **Inline-edit overlay editors don't commit on blur.** `p-select` / `p-datepicker` options live in
   an `appendTo="body"` overlay, so the mousedown that picks a value blurs the input *before* the value
   lands — a blur-based commit fires with the stale value and tears the editor down before the pick
