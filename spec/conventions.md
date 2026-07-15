@@ -36,6 +36,13 @@ session. For scaffolding-specific patterns see `code-gen.convention.md`; for per
   features as items/children there (built routes link, unbuilt ones render as muted `disabled`).
 - **List pages:** sortable/paginated `p-table`, `p-drawer` filter, and session-storage keys
   `{entity}-list-filters` / `-sort` / `-page`. `p-select` in drawers uses `appendTo="body"`.
+- **Inline table editing** (reference: `features/courses/course-list`): double-click a cell to edit
+  (single-click must not); persist on the editor losing focus by calling the row's existing update
+  endpoint. Per-column editor types (text / `p-inputNumber` / `p-datepicker` / `p-select` /
+  `p-checkbox`). Validation shows an inline error and keeps the cell in edit mode on failure; a failed
+  save reverts the cell. FK-label and PK columns stay read-only. Numeric editors set per-column
+  `min` / `max` / decimal precision matched to the DB column type (see `NUMBER_FIELD_CONFIG`),
+  enforced in both the editor and the validator. **See the overlay-editor gotcha below.**
 - **Form pages:** reactive forms, `forkJoin` for parallel lookups on init, `p-multiselect` for N-N.
 - **Dates:** display API `datetime` values by appending `'Z'` to the ISO string before formatting
   (Dapper returns `Kind=Unspecified`). For `date` columns use `core/utils/date.util.ts`.
@@ -47,3 +54,8 @@ session. For scaffolding-specific patterns see `code-gen.convention.md`; for per
   API itself round-trips UTF-8 correctly (verified end-to-end against the live DB).
 - **Connection string** is in `src/CMS.API/appsettings.json` (`.\SQLEXPRESS`, database `CMS`,
   Trusted_Connection). Trust cert / no encrypt for local dev.
+- **Inline-edit overlay editors don't commit on blur.** `p-select` / `p-datepicker` options live in
+  an `appendTo="body"` overlay, so the mousedown that picks a value blurs the input *before* the value
+  lands — a blur-based commit fires with the stale value and tears the editor down before the pick
+  registers. Commit these on `(onChange)` / `(onSelect)` and close them on `(onHide)` / `(onClose)`;
+  only plain text/number inputs commit on `(blur)`.
