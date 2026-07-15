@@ -32,7 +32,7 @@ global.json         pins the .NET 9 SDK (9.0.314)
 
 ## Auth — global JWT (a guardrail, not opt-in)
 
-- The API requires an **authenticated user on every controller by default** (a global `AuthorizeFilter` in `Program.cs`). A new controller is protected automatically — you do **not** add `[Authorize]`. `AuthController.Login` is the **only** `[AllowAnonymous]` endpoint (its `UpdateProfile` sibling is protected like everything else — it reads the caller's UserId from the JWT, never the body).
+- The API requires an **authenticated user on every controller by default** (a global `AuthorizeFilter` in `Program.cs`). A new controller is protected automatically — you do **not** add `[Authorize]`. `AuthController.Login` is the **only** `[AllowAnonymous]` endpoint (its `UpdateProfile` / `ChangePassword` siblings are protected like everything else — they read the caller's UserId from the JWT, never the body).
 - Tokens are HS256, signed with the `symmetricSecurityKey` from `SysConfig` (`configKey='appConfig'`), read via `ISigningKeyProvider` — the **same key issues and validates**. Never hard-code it. Auth code lives in `CMS.API/Security/`.
 - A backend test that calls a protected endpoint needs a bearer token (see `AuthorizationIntegrationTests`, which fakes the repo + signing key). The Angular app stores the profile in **session** storage (`cms.auth`, never local storage) and attaches the token via an HTTP interceptor; routes sit behind a guard. Detail: `spec/auth/Auth.md`.
 

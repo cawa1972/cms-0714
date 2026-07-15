@@ -18,6 +18,12 @@ public class AuthController : ControllerBase
     // Generic message on every failure so we never reveal which check (user, active, password) failed.
     private const string InvalidCredentialsMessage = "invalid credentials";
 
+    // Change-password messages (bilingual — shown as-is in the UI).
+    private const string CurrentPasswordIncorrectMessage =
+        "目前密碼錯誤。(Current password is incorrect.)";
+    private const string PasswordMismatchMessage =
+        "新密碼與確認密碼不一致。(New password and confirmation do not match.)";
+
     private readonly IAuthRepository _repository;
     private readonly IJwtTokenService _tokenService;
     private readonly ISigningKeyProvider _signingKeyProvider;
@@ -93,5 +99,43 @@ public class AuthController : ControllerBase
             return NotFound();
 
         return Ok(new UpdateProfileResponse { UserId = userId, UserName = userName });
+    }
+
+    /// <summary>
+    /// Changes the signed-in user's own password. The target UserId comes from the JWT — never the
+    /// body. Rejects (400, bilingual message, nothing written) when the current password is wrong,
+    /// the new password fails the complexity policy (<see cref="PasswordPolicy"/>), or new/confirm
+    /// don't match. On success stores SHA256(new) and stamps PasswordUpdatedTime. No hash is ever
+    /// sent to or from the client.
+    /// </summary>
+    [HttpPost("change-password")]
+    public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest request)
+    {
+        var userId = User.FindFirst(JwtClaims.UserId)?.Value;
+        if (string.IsNullOrEmpty(userId))
+            return Unauthorized();
+
+        var credential = await _repository.GetCredentialAsync(userId);
+        if (credential is null)
+            return NotFound();
+
+        // 1. The current password must hash to the stored PasswordHash.
+        if (credential.PasswordHash != PasswordHasher.Hash(request.CurrentPassword))
+            return BadRequest(new { message = CurrentPasswordIncorrectMessage });
+
+        // 2. The new password must satisfy the complexity policy.
+        if (!PasswordPolicy.IsCompliant(request.NewPassword))
+            return BadRequest(new { message = PasswordPolicy.RequirementMessage });
+
+        // 3. New and confirmation must match.
+        if (request.NewPassword != request.ConfirmNewPassword)
+            return BadRequest(new { message = PasswordMismatchMessage });
+
+        // 4. Store the new hash; the repository also stamps PasswordUpdatedTime.
+        var updated = await _repository.UpdatePasswordAsync(userId, PasswordHasher.Hash(request.NewPassword));
+        if (!updated)
+            return NotFound();
+
+        return NoContent();
     }
 }

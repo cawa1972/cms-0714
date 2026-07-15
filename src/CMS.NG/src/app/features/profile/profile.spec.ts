@@ -6,7 +6,7 @@ import { of } from 'rxjs';
 
 import { Profile } from './profile';
 import { AuthService } from '@core/services/auth.service';
-import { UpdateProfileResponse } from '@core/models/auth.model';
+import { ChangePasswordRequest, UpdateProfileResponse } from '@core/models/auth.model';
 
 describe('Profile', () => {
   let fixture: ComponentFixture<Profile>;
@@ -16,6 +16,7 @@ describe('Profile', () => {
   // how the real AuthService refreshes the shell after a successful save.
   let shellUserName: ReturnType<typeof signal<string | null>>;
   let updateSpy: jasmine.Spy;
+  let changePasswordSpy: jasmine.Spy;
 
   beforeEach(async () => {
     shellUserName = signal<string | null>('Helen Chen');
@@ -26,11 +27,16 @@ describe('Profile', () => {
       return of(res);
     });
 
+    changePasswordSpy = jasmine
+      .createSpy('changePassword')
+      .and.callFake((_: ChangePasswordRequest) => of(void 0));
+
     const mockAuth = {
       userId: signal<string | null>('helen'),
       userName: shellUserName,
       roles: signal<string[]>(['Admin', 'Editor']),
       updateUserName: updateSpy,
+      changePassword: changePasswordSpy,
     };
 
     await TestBed.configureTestingModule({
@@ -51,8 +57,10 @@ describe('Profile', () => {
     const el = fixture.nativeElement as HTMLElement;
     expect(el.textContent).toContain('helen');
 
-    // The only editable input on the page is UserName; UserId and roles are display-only.
-    const inputs = el.querySelectorAll('input');
+    // The only editable non-password input is UserName; UserId and roles are display-only.
+    const inputs = Array.from(el.querySelectorAll('input')).filter(
+      (i) => i.getAttribute('type') !== 'password',
+    );
     expect(inputs.length).toBe(1);
     expect(inputs[0].getAttribute('id')).toBe('userName');
   });
@@ -91,5 +99,83 @@ describe('Profile', () => {
     component.save();
 
     expect(updateSpy).not.toHaveBeenCalled();
+  });
+
+  // ---- Change Password: client-side validation --------------------------------
+
+  function fillPw(current: string, next: string, confirm: string): void {
+    component['pwForm'].setValue({
+      currentPassword: current,
+      newPassword: next,
+      confirmPassword: confirm,
+    });
+  }
+
+  it('requires all three password fields', () => {
+    fillPw('', '', '');
+    expect(component['pwForm'].invalid).toBeTrue();
+
+    component.changePassword();
+    expect(changePasswordSpy).not.toHaveBeenCalled();
+  });
+
+  it('rejects a new password shorter than 8 characters', () => {
+    fillPw('old-pw', 'Ab1!', 'Ab1!');
+
+    expect(component['pwForm'].get('newPassword')!.hasError('complexity')).toBeTrue();
+    component.changePassword();
+    expect(changePasswordSpy).not.toHaveBeenCalled();
+  });
+
+  it('rejects a new password with fewer than 3 of the 4 character classes', () => {
+    // 8+ chars but only lowercase + digits = 2 classes.
+    fillPw('old-pw', 'abcd1234', 'abcd1234');
+
+    expect(component['pwForm'].get('newPassword')!.hasError('complexity')).toBeTrue();
+    component.changePassword();
+    expect(changePasswordSpy).not.toHaveBeenCalled();
+  });
+
+  it('accepts an 8-char password with 3 of the 4 classes', () => {
+    fillPw('old-pw', 'Abcdefg1', 'Abcdefg1');
+
+    expect(component['pwForm'].get('newPassword')!.hasError('complexity')).toBeFalse();
+    expect(component['pwForm'].valid).toBeTrue();
+  });
+
+  it('flags a new/confirm mismatch as a group error', () => {
+    fillPw('old-pw', 'Abcdefg1', 'Different1!');
+
+    expect(component['pwForm'].hasError('mismatch')).toBeTrue();
+    component.changePassword();
+    expect(changePasswordSpy).not.toHaveBeenCalled();
+  });
+
+  it('shows the bilingual complexity message for a weak new password', () => {
+    fillPw('old-pw', 'abcd1234', 'abcd1234');
+    component['pwForm'].markAllAsTouched();
+    fixture.detectChanges();
+
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain('密碼長度至少需 8 碼');
+    expect(text).toContain('at least 3 of the 4 classes');
+  });
+
+  it('submits a valid change and resets the form', () => {
+    fillPw('old-pw', 'Abcdefg1', 'Abcdefg1');
+
+    component.changePassword();
+
+    expect(changePasswordSpy).toHaveBeenCalledWith({
+      currentPassword: 'old-pw',
+      newPassword: 'Abcdefg1',
+      confirmNewPassword: 'Abcdefg1',
+    });
+    // Cleared after success so passwords never linger in the form.
+    expect(component['pwForm'].getRawValue()).toEqual({
+      currentPassword: null,
+      newPassword: null,
+      confirmPassword: null,
+    });
   });
 });

@@ -44,3 +44,73 @@
     </div>
   </div>
 </form>
+
+<form [formGroup]="pwForm" (ngSubmit)="changePassword()">
+  <div class="card">
+    <h2 class="card-title">變更密碼 Change Password</h2>
+
+    <div class="field">
+      <label for="currentPassword">目前密碼 Current Password<span class="required">*</span></label>
+      <p-password
+        inputId="currentPassword"
+        formControlName="currentPassword"
+        [feedback]="false"
+        [toggleMask]="true"
+        styleClass="full-width"
+        inputStyleClass="full-width"
+        autocomplete="current-password"
+      />
+      @if (pwInvalid('currentPassword')) {
+        <div class="field-error">請輸入目前密碼。</div>
+      }
+    </div>
+
+    <div class="field">
+      <label for="newPassword">新密碼 New Password<span class="required">*</span></label>
+      <p-password
+        inputId="newPassword"
+        formControlName="newPassword"
+        [feedback]="false"
+        [toggleMask]="true"
+        styleClass="full-width"
+        inputStyleClass="full-width"
+        autocomplete="new-password"
+      />
+      @if (pwInvalid('newPassword')) {
+        <div class="field-error">
+          @if (pwForm.get('newPassword')?.hasError('required')) {
+            請輸入新密碼。
+          } @else {
+            {{ passwordRule }}
+          }
+        </div>
+      }
+    </div>
+
+    <div class="field">
+      <label for="confirmPassword">確認新密碼 Confirm New Password<span class="required">*</span></label>
+      <p-password
+        inputId="confirmPassword"
+        formControlName="confirmPassword"
+        [feedback]="false"
+        [toggleMask]="true"
+        styleClass="full-width"
+        inputStyleClass="full-width"
+        autocomplete="new-password"
+      />
+      @if (pwInvalid('confirmPassword')) {
+        <div class="field-error">請再次輸入新密碼。</div>
+      } @else if (mismatch()) {
+        <div class="field-error">新密碼與確認密碼不一致。(New password and confirmation do not match.)</div>
+      }
+    </div>
+
+    <p-button
+      type="submit"
+      label="變更密碼"
+      icon="pi pi-key"
+      severity="warn"
+      [loading]="pwSaving()"
+    />
+  </div>
+</form>

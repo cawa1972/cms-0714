@@ -17,4 +17,11 @@ public interface IAuthRepository
     /// if no such user exists.
     /// </summary>
     Task<bool> UpdateUserNameAsync(string userId, string userName);
+
+    /// <summary>
+    /// Stores a new <c>PasswordHash</c> for the given UserId and stamps <c>PasswordUpdatedTime</c>
+    /// with the current time (self-service password change). Verification of the current password and
+    /// the complexity policy are the caller's job. Returns false if no such user exists.
+    /// </summary>
+    Task<bool> UpdatePasswordAsync(string userId, string passwordHash);
 }
