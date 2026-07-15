@@ -1,0 +1,88 @@
+.row-audit-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px;
+  border: 1px solid var(--p-content-border-color, #d0d5dd);
+  border-radius: 16px;
+  background: var(--p-content-background, #ffffff);
+  color: inherit;
+  font: inherit;
+  font-size: 0.8125rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.row-audit-badge:hover {
+  background: var(--p-content-hover-background, #f4f4f5);
+}
+
+.row-audit-badge-label {
+  font-weight: 600;
+}
+
+.row-audit-badge-latest {
+  color: var(--p-text-muted-color, #6b7280);
+}
+
+.row-audit-badge-none {
+  font-style: italic;
+}
+
+.row-audit-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.row-audit-table th,
+.row-audit-table td {
+  padding: 8px 12px;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--p-content-border-color, #e5e7eb);
+}
+
+.row-audit-table th {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.row-audit-time {
+  white-space: nowrap;
+}
+
+.row-audit-action {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: var(--p-surface-100, #f4f4f5);
+}
+
+.row-audit-action-insert {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.row-audit-action-update {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.row-audit-action-delete {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+/* Update descriptions are comma-separated column lists — let them wrap. */
+.row-audit-desc {
+  word-break: break-word;
+}
+
+.row-audit-empty {
+  padding: 24px 0;
+  text-align: center;
+  color: var(--p-text-muted-color, #6b7280);
+}

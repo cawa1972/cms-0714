@@ -1,0 +1,50 @@
+@if (hasRecord()) {
+  <button type="button" class="row-audit-badge" (click)="open()">
+    <span class="row-audit-badge-label">異動紀錄 History</span>
+    @if (latest(); as l) {
+      <span class="row-audit-badge-latest">
+        {{ l.actionType }} by {{ l.userName }} · {{ (l.dateTime + 'Z') | date: 'yyyy-MM-dd HH:mm' }}
+      </span>
+    } @else {
+      <span class="row-audit-badge-latest row-audit-badge-none">尚無紀錄 No history</span>
+    }
+  </button>
+
+  <p-dialog
+    header="異動紀錄 History"
+    [(visible)]="dialogVisible"
+    [modal]="true"
+    [dismissableMask]="true"
+    [style]="{ width: 'min(720px, 90vw)' }"
+    appendTo="body"
+  >
+    @if (entries().length > 0) {
+      <table class="row-audit-table">
+        <thead>
+          <tr>
+            <th>時間 Time</th>
+            <th>使用者 User</th>
+            <th>動作 Action</th>
+            <th>說明 Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (e of entries(); track $index) {
+            <tr>
+              <td class="row-audit-time">{{ (e.dateTime + 'Z') | date: 'yyyy-MM-dd HH:mm:ss' }}</td>
+              <td>{{ e.userName }}</td>
+              <td>
+                <span [class]="'row-audit-action row-audit-action-' + e.actionType.toLowerCase()">
+                  {{ e.actionType }}
+                </span>
+              </td>
+              <td class="row-audit-desc">{{ e.actionDesc || '—' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    } @else {
+      <div class="row-audit-empty">尚無異動紀錄 No history yet</div>
+    }
+  </p-dialog>
+}

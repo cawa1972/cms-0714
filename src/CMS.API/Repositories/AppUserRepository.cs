@@ -1,5 +1,6 @@
 using System.Data;
 using System.Text.Json;
+using CMS.API.Audit;
 using CMS.API.Data;
 using CMS.API.Models;
 using CMS.API.Security;
@@ -9,9 +10,16 @@ namespace CMS.API.Repositories;
 
 public sealed class AppUserRepository : IAppUserRepository
 {
-    private readonly ISqlConnectionFactory _factory;
+    private const string TableName = "AppUser";
 
-    public AppUserRepository(ISqlConnectionFactory factory) => _factory = factory;
+    private readonly ISqlConnectionFactory _factory;
+    private readonly IRowAuditWriter _audit;
+
+    public AppUserRepository(ISqlConnectionFactory factory, IRowAuditWriter audit)
+    {
+        _factory = factory;
+        _audit = audit;
+    }
 
     // PasswordHash is intentionally never selected — it is backend-only.
     private const string SelectColumns = """
@@ -97,6 +105,10 @@ public sealed class AppUserRepository : IAppUserRepository
 
         await SyncRolesAsync(db, tx, request.UserId, request.RoleIds);
 
+        var created = await GetSnapshotAsync(db, tx, request.UserId);
+        if (created is not null)
+            await _audit.LogInsertAsync(TableName, created, db, tx);
+
         tx.Commit();
         return pkid;
     }
@@ -106,6 +118,12 @@ public sealed class AppUserRepository : IAppUserRepository
         using var db = _factory.Create();
         db.Open();
         using var tx = db.BeginTransaction();
+
+        // Load "before" (including assigned roles) first so the audit row can list exactly the
+        // changed columns; a rewritten-but-identical RoleIds list does not count as a change.
+        var before = await GetSnapshotAsync(db, tx, request.UserId);
+        if (before is null)
+            return false;
 
         // PasswordHash / PasswordUpdatedTime are deliberately untouched here.
         var affected = await db.ExecuteAsync("""
@@ -123,6 +141,9 @@ public sealed class AppUserRepository : IAppUserRepository
 
         await SyncRolesAsync(db, tx, request.UserId, request.RoleIds);
 
+        var after = await GetSnapshotAsync(db, tx, request.UserId);
+        await _audit.LogUpdateAsync(TableName, before, after!, db, tx);
+
         tx.Commit();
         return true;
     }
@@ -133,11 +154,18 @@ public sealed class AppUserRepository : IAppUserRepository
         db.Open();
         using var tx = db.BeginTransaction();
 
+        // Load the row first so its UserId/name is still available for the audit description.
+        var row = await GetSnapshotAsync(db, tx, userId);
+        if (row is null)
+            return false;
+
         await db.ExecuteAsync("DELETE FROM AppUserRole WHERE UserId = @userId", new { userId }, tx);
-        var affected = await db.ExecuteAsync("DELETE FROM AppUser WHERE UserId = @userId", new { userId }, tx);
+        await db.ExecuteAsync("DELETE FROM AppUser WHERE UserId = @userId", new { userId }, tx);
+
+        await _audit.LogDeleteAsync(TableName, row, db, tx);
 
         tx.Commit();
-        return affected > 0;
+        return true;
     }
 
     public async Task<bool> ResetPasswordAsync(string userId)
@@ -145,6 +173,10 @@ public sealed class AppUserRepository : IAppUserRepository
         using var db = _factory.Create();
         db.Open();
         using var tx = db.BeginTransaction();
+
+        var before = await GetSnapshotAsync(db, tx, userId);
+        if (before is null)
+            return false;
 
         var passwordHash = await GetDefaultPasswordHashAsync(db, tx);
 
@@ -155,8 +187,43 @@ public sealed class AppUserRepository : IAppUserRepository
              WHERE UserId = @UserId;
             """, new { UserId = userId, PasswordHash = passwordHash }, tx);
 
+        if (affected == 0)
+            return false;
+
+        // PasswordHash is backend-only and absent from the model, so the audit row surfaces the
+        // reset as a "PasswordUpdatedTime" change — the hash value itself is never logged.
+        var after = await GetSnapshotAsync(db, tx, userId);
+        await _audit.LogUpdateAsync(TableName, before, after!, db, tx);
+
         tx.Commit();
-        return affected > 0;
+        return true;
+    }
+
+    /// <summary>
+    /// Audit snapshot, read inside the caller's transaction: raw AppUser columns (no derived
+    /// RoleCount, no PasswordHash) plus the assigned role ids, so membership changes show up as
+    /// "RoleIds".
+    /// </summary>
+    private static async Task<AppUser?> GetSnapshotAsync(IDbConnection db, IDbTransaction tx, string userId)
+    {
+        var user = await db.QuerySingleOrDefaultAsync<AppUser>("""
+            SELECT u.pkid AS Pkid,
+                   u.UserId,
+                   u.UserName,
+                   u.IsActive,
+                   u.PasswordUpdatedTime
+            FROM AppUser u
+            WHERE u.UserId = @userId
+            """, new { userId }, tx);
+
+        if (user is null)
+            return null;
+
+        var roleIds = await db.QueryAsync<string>(
+            "SELECT RoleId FROM AppUserRole WHERE UserId = @userId ORDER BY RoleId",
+            new { userId }, tx);
+        user.RoleIds = roleIds.ToList();
+        return user;
     }
 
     /// <summary>Delete-then-reinsert the AppUserRole links for a user.</summary>

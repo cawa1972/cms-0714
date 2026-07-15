@@ -11,10 +11,11 @@ import { LookupItem } from '@core/models/app-role.model';
 import { AppUserService } from '@core/services/app-user.service';
 import { AuthService } from '@core/services/auth.service';
 import { LookupService } from '@core/services/lookup.service';
+import { RowAuditBadge } from '@core/components/row-audit-badge/row-audit-badge';
 
 @Component({
   selector: 'app-app-user-detail',
-  imports: [DatePipe, ButtonModule, TagModule],
+  imports: [DatePipe, ButtonModule, TagModule, RowAuditBadge],
   templateUrl: './app-user-detail.html',
   styleUrl: './app-user-detail.css',
 })

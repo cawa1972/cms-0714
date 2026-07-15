@@ -6,10 +6,11 @@ import { MessageService } from 'primeng/api';
 
 import { PublishStatus } from '@core/models/publish-status.model';
 import { PublishStatusService } from '@core/services/publish-status.service';
+import { RowAuditBadge } from '@core/components/row-audit-badge/row-audit-badge';
 
 @Component({
   selector: 'app-publish-status-detail',
-  imports: [ButtonModule, TagModule],
+  imports: [ButtonModule, TagModule, RowAuditBadge],
   templateUrl: './publish-status-detail.html',
   styleUrl: './publish-status-detail.css',
 })

@@ -10,6 +10,7 @@ import { MessageService } from 'primeng/api';
 
 import { PublishStatusRequest } from '@core/models/publish-status.model';
 import { PublishStatusService } from '@core/services/publish-status.service';
+import { RowAuditBadge } from '@core/components/row-audit-badge/row-audit-badge';
 
 @Component({
   selector: 'app-publish-status-form',
@@ -19,6 +20,7 @@ import { PublishStatusService } from '@core/services/publish-status.service';
     InputNumberModule,
     CheckboxModule,
     ButtonModule,
+    RowAuditBadge,
   ],
   templateUrl: './publish-status-form.html',
   styleUrl: './publish-status-form.css',
@@ -34,6 +36,9 @@ export class PublishStatusForm implements OnInit {
   protected readonly loading = signal(true);
   protected readonly saving = signal(false);
 
+  /** The record's pkid for the audit-history badge; stays null in create mode (no record yet). */
+  protected readonly auditPkid = signal<number | null>(null);
+
   protected readonly form = this.fb.group({
     pkid: [null as number | null, [Validators.required, Validators.min(0), Validators.max(255)]],
     description: ['', [Validators.required, Validators.maxLength(50)]],
@@ -48,6 +53,7 @@ export class PublishStatusForm implements OnInit {
     const idParam = this.route.snapshot.paramMap.get('id');
     this.pkid = idParam != null ? Number(idParam) : null;
     this.isEdit.set(this.pkid != null);
+    this.auditPkid.set(this.pkid);
 
     if (this.pkid != null) {
       this.service.getById(this.pkid).subscribe({

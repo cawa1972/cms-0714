@@ -12,6 +12,7 @@ import { MessageService } from 'primeng/api';
 import { AppRoleRequest, LookupItem } from '@core/models/app-role.model';
 import { AppRoleService } from '@core/services/app-role.service';
 import { LookupService } from '@core/services/lookup.service';
+import { RowAuditBadge } from '@core/components/row-audit-badge/row-audit-badge';
 
 @Component({
   selector: 'app-app-role-form',
@@ -21,6 +22,7 @@ import { LookupService } from '@core/services/lookup.service';
     InputNumberModule,
     MultiSelectModule,
     ButtonModule,
+    RowAuditBadge,
   ],
   templateUrl: './app-role-form.html',
   styleUrl: './app-role-form.css',
@@ -37,6 +39,9 @@ export class AppRoleForm implements OnInit {
   protected readonly loading = signal(true);
   protected readonly saving = signal(false);
   protected readonly userOptions = signal<LookupItem[]>([]);
+
+  /** Numeric surrogate pkid of the edited role, for the audit-history badge (null in create mode). */
+  protected readonly auditPkid = signal<number | null>(null);
 
   protected readonly form = this.fb.group({
     roleId: ['', [Validators.required, Validators.maxLength(200)]],
@@ -59,6 +64,7 @@ export class AppRoleForm implements OnInit {
       next: ({ users, role }) => {
         this.userOptions.set(users);
         if (role) {
+          this.auditPkid.set(role.pkid);
           this.form.patchValue({
             roleId: role.roleId,
             roleName: role.roleName,

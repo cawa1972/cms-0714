@@ -15,6 +15,7 @@ import { Course, CourseRequest } from '@core/models/course.model';
 import { CourseService } from '@core/services/course.service';
 import { LookupService } from '@core/services/lookup.service';
 import { toIso, fromIso } from '@core/utils/date.util';
+import { RowAuditBadge } from '@core/components/row-audit-badge/row-audit-badge';
 
 interface NumOption {
   value: number;
@@ -32,6 +33,7 @@ interface NumOption {
     DatePickerModule,
     CheckboxModule,
     ButtonModule,
+    RowAuditBadge,
   ],
   templateUrl: './course-form.html',
   styleUrl: './course-form.css',

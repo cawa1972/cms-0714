@@ -1,6 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Confirmation, ConfirmationService, MessageService } from 'primeng/api';
 import { of, throwError } from 'rxjs';
@@ -48,6 +50,8 @@ function setup(routeId: string | null, callerRoles: string[] = ['Admin']) {
     imports: [AppUserForm],
     providers: [
       provideNoopAnimations(),
+      provideHttpClient(),
+      provideHttpClientTesting(),
       MessageService,
       { provide: AppUserService, useValue: serviceSpy },
       { provide: AuthService, useValue: mockAuth },

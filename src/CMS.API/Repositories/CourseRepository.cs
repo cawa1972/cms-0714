@@ -1,3 +1,5 @@
+using System.Data;
+using CMS.API.Audit;
 using CMS.API.Data;
 using CMS.API.Models;
 using Dapper;
@@ -6,9 +8,16 @@ namespace CMS.API.Repositories;
 
 public sealed class CourseRepository : ICourseRepository
 {
-    private readonly ISqlConnectionFactory _factory;
+    private const string TableName = "Course";
 
-    public CourseRepository(ISqlConnectionFactory factory) => _factory = factory;
+    private readonly ISqlConnectionFactory _factory;
+    private readonly IRowAuditWriter _audit;
+
+    public CourseRepository(ISqlConnectionFactory factory, IRowAuditWriter audit)
+    {
+        _factory = factory;
+        _audit = audit;
+    }
 
     // Shared SELECT: FK columns aliased to the C# property names; label columns resolved via JOINs.
     // Partner and PublishStatus are NOT NULL (INNER JOIN); CourseGroup is nullable (LEFT JOIN).
@@ -132,11 +141,44 @@ public sealed class CourseRepository : ICourseRepository
             $"{SelectColumns} WHERE c.pkid = @pkid", new { pkid });
     }
 
+    // Audit snapshot: raw table columns only — no JOIN labels — so the update audit's
+    // changed-column list contains real Course columns, never derived display fields.
+    private const string AuditSelect = """
+        SELECT c.pkid AS Pkid,
+               c.Title,
+               c.OfficialTitle,
+               c.CourseId,
+               c.ProdCourseId,
+               c.FriendlyUrl,
+               c.DisplayOrder,
+               c.Partner_pkid       AS PartnerPkid,
+               c.CourseGroup_pkid   AS CourseGroupPkid,
+               c.PublishStatus_pkid AS PublishStatusPkid,
+               c.ScheduleOn,
+               c.ScheduleOff,
+               c.Hour,
+               c.ListPrice,
+               c.LearningCredit,
+               c.Material,
+               c.Objective,
+               c.Target,
+               c.Prerequisites,
+               c.Outline,
+               c.TowardCertOrExam,
+               c.Note,
+               c.OtherInfo,
+               c.CanRepeat
+        FROM Course c
+        """;
+
     public async Task<int> CreateAsync(CourseRequest request)
     {
         using var db = _factory.Create();
+        db.Open();
+        using var tx = db.BeginTransaction();
+
         // pkid is int IDENTITY: excluded from the column list, returned via SCOPE_IDENTITY().
-        return await db.ExecuteScalarAsync<int>("""
+        var pkid = await db.ExecuteScalarAsync<int>("""
             INSERT INTO Course
                 (Title, OfficialTitle, CourseId, ProdCourseId, FriendlyUrl, DisplayOrder,
                  Partner_pkid, CourseGroup_pkid, PublishStatus_pkid, ScheduleOn, ScheduleOff,
@@ -148,12 +190,27 @@ public sealed class CourseRepository : ICourseRepository
                  @Hour, @ListPrice, @LearningCredit, @Material, @Objective, @Target, @Prerequisites,
                  @Outline, @TowardCertOrExam, @Note, @OtherInfo, @CanRepeat);
             SELECT CAST(SCOPE_IDENTITY() AS int);
-            """, request);
+            """, request, tx);
+
+        var created = await GetSnapshotAsync(db, tx, pkid);
+        if (created is not null)
+            await _audit.LogInsertAsync(TableName, created, db, tx);
+
+        tx.Commit();
+        return pkid;
     }
 
     public async Task<bool> UpdateAsync(CourseRequest request)
     {
         using var db = _factory.Create();
+        db.Open();
+        using var tx = db.BeginTransaction();
+
+        // Load "before" first so the audit row can list exactly the changed columns.
+        var before = await GetSnapshotAsync(db, tx, request.Pkid);
+        if (before is null)
+            return false;
+
         var affected = await db.ExecuteAsync("""
             UPDATE Course
                SET Title = @Title,
@@ -180,15 +237,38 @@ public sealed class CourseRepository : ICourseRepository
                    OtherInfo = @OtherInfo,
                    CanRepeat = @CanRepeat
              WHERE pkid = @Pkid;
-            """, request);
-        return affected > 0;
+            """, request, tx);
+
+        if (affected == 0)
+            return false;
+
+        var after = await GetSnapshotAsync(db, tx, request.Pkid);
+        await _audit.LogUpdateAsync(TableName, before, after!, db, tx);
+
+        tx.Commit();
+        return true;
     }
 
     public async Task<bool> DeleteAsync(int pkid)
     {
         using var db = _factory.Create();
-        var affected = await db.ExecuteAsync(
-            "DELETE FROM Course WHERE pkid = @pkid", new { pkid });
-        return affected > 0;
+        db.Open();
+        using var tx = db.BeginTransaction();
+
+        // Load the row first so its Title is still available for the audit description.
+        var row = await GetSnapshotAsync(db, tx, pkid);
+        if (row is null)
+            return false;
+
+        await db.ExecuteAsync("DELETE FROM Course WHERE pkid = @pkid", new { pkid }, tx);
+        await _audit.LogDeleteAsync(TableName, row, db, tx);
+
+        tx.Commit();
+        return true;
     }
+
+    /// <summary>Audit snapshot (raw columns, no labels), read inside the caller's transaction.</summary>
+    private static Task<Course?> GetSnapshotAsync(IDbConnection db, IDbTransaction tx, int pkid) =>
+        db.QuerySingleOrDefaultAsync<Course?>(
+            $"{AuditSelect} WHERE c.pkid = @pkid", new { pkid }, tx);
 }

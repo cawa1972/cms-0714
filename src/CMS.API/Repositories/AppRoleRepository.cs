@@ -1,4 +1,5 @@
 using System.Data;
+using CMS.API.Audit;
 using CMS.API.Data;
 using CMS.API.Models;
 using Dapper;
@@ -7,9 +8,16 @@ namespace CMS.API.Repositories;
 
 public sealed class AppRoleRepository : IAppRoleRepository
 {
-    private readonly ISqlConnectionFactory _factory;
+    private const string TableName = "AppRole";
 
-    public AppRoleRepository(ISqlConnectionFactory factory) => _factory = factory;
+    private readonly ISqlConnectionFactory _factory;
+    private readonly IRowAuditWriter _audit;
+
+    public AppRoleRepository(ISqlConnectionFactory factory, IRowAuditWriter audit)
+    {
+        _factory = factory;
+        _audit = audit;
+    }
 
     private const string SelectColumns = """
         SELECT r.pkid AS Pkid,
@@ -90,6 +98,10 @@ public sealed class AppRoleRepository : IAppRoleRepository
 
         await SyncUsersAsync(db, tx, request.RoleId, request.UserIds);
 
+        var created = await GetSnapshotAsync(db, tx, request.RoleId);
+        if (created is not null)
+            await _audit.LogInsertAsync(TableName, created, db, tx);
+
         tx.Commit();
         return pkid;
     }
@@ -99,6 +111,12 @@ public sealed class AppRoleRepository : IAppRoleRepository
         using var db = _factory.Create();
         db.Open();
         using var tx = db.BeginTransaction();
+
+        // Load "before" (including assigned users) first so the audit row can list exactly the
+        // changed columns; a rewritten-but-identical UserIds list does not count as a change.
+        var before = await GetSnapshotAsync(db, tx, request.RoleId);
+        if (before is null)
+            return false;
 
         var affected = await db.ExecuteAsync("""
             UPDATE AppRole
@@ -116,6 +134,9 @@ public sealed class AppRoleRepository : IAppRoleRepository
 
         await SyncUsersAsync(db, tx, request.RoleId, request.UserIds);
 
+        var after = await GetSnapshotAsync(db, tx, request.RoleId);
+        await _audit.LogUpdateAsync(TableName, before, after!, db, tx);
+
         tx.Commit();
         return true;
     }
@@ -126,11 +147,44 @@ public sealed class AppRoleRepository : IAppRoleRepository
         db.Open();
         using var tx = db.BeginTransaction();
 
+        // Load the row first so its RoleId/name is still available for the audit description.
+        var row = await GetSnapshotAsync(db, tx, roleId);
+        if (row is null)
+            return false;
+
         await db.ExecuteAsync("DELETE FROM AppUserRole WHERE RoleId = @roleId", new { roleId }, tx);
-        var affected = await db.ExecuteAsync("DELETE FROM AppRole WHERE RoleId = @roleId", new { roleId }, tx);
+        await db.ExecuteAsync("DELETE FROM AppRole WHERE RoleId = @roleId", new { roleId }, tx);
+
+        await _audit.LogDeleteAsync(TableName, row, db, tx);
 
         tx.Commit();
-        return affected > 0;
+        return true;
+    }
+
+    /// <summary>
+    /// Audit snapshot, read inside the caller's transaction: raw AppRole columns (no derived
+    /// UserCount) plus the assigned user ids, so membership changes show up as "UserIds".
+    /// </summary>
+    private static async Task<AppRole?> GetSnapshotAsync(IDbConnection db, IDbTransaction tx, string roleId)
+    {
+        var role = await db.QuerySingleOrDefaultAsync<AppRole>("""
+            SELECT r.pkid AS Pkid,
+                   r.RoleId,
+                   r.RoleName,
+                   r.PermissionLevel,
+                   r.Description
+            FROM AppRole r
+            WHERE r.RoleId = @roleId
+            """, new { roleId }, tx);
+
+        if (role is null)
+            return null;
+
+        var userIds = await db.QueryAsync<string>(
+            "SELECT UserId FROM AppUserRole WHERE RoleId = @roleId ORDER BY UserId",
+            new { roleId }, tx);
+        role.UserIds = userIds.ToList();
+        return role;
     }
 
     /// <summary>Delete-then-reinsert the AppUserRole links for a role.</summary>

@@ -1,5 +1,7 @@
 using System.Text;
+using CMS.API.Audit;
 using CMS.API.Data;
+using CMS.API.Middleware;
 using CMS.API.Repositories;
 using CMS.API.Security;
 using Dapper;
@@ -51,6 +53,13 @@ builder.Services.AddScoped<IFeaturedPromoItemRepository, FeaturedPromoItemReposi
 builder.Services.AddScoped<ILookupRepository, LookupRepository>();
 builder.Services.AddScoped<IAuthRepository, AuthRepository>();
 
+// Cross-cutting row audit: repositories log one RowAudit row per Insert/Update/Delete. The writer
+// reads the acting user's UserName claim from the current request, hence IHttpContextAccessor.
+// The repository is the read side (per-record history for the RowAudit badge).
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<IRowAuditWriter, RowAuditWriter>();
+builder.Services.AddScoped<IRowAuditRepository, RowAuditRepository>();
+
 // Token issuance + the shared signing key (SysConfig 'appConfig'.symmetricSecurityKey) that both
 // issues and validates JWTs.
 builder.Services.AddSingleton<IJwtTokenService, JwtTokenService>();
@@ -90,6 +99,9 @@ builder.Services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationSc
 builder.Services.AddAuthorization();
 
 var app = builder.Build();
+
+// Outermost middleware: any unhandled exception becomes a logged, generic 500 JSON response.
+app.UseMiddleware<ExceptionHandlingMiddleware>();
 
 app.UseSwagger();
 app.UseSwaggerUI(options =>

@@ -1,5 +1,6 @@
 <div class="page-toolbar">
   <h1 class="page-title">檢視發布狀態</h1>
+  <app-row-audit-badge tableName="PublishStatus" [pkid]="status()?.pkid ?? null" />
   <span class="spacer"></span>
   <p-button label="返回" icon="pi pi-arrow-left" severity="secondary" (onClick)="back()" />
   <p-button label="編輯" icon="pi pi-pencil" (onClick)="edit()" [disabled]="!status()" />

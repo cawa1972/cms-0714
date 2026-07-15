@@ -1,3 +1,5 @@
+using System.Data;
+using CMS.API.Audit;
 using CMS.API.Data;
 using CMS.API.Models;
 using Dapper;
@@ -6,9 +8,16 @@ namespace CMS.API.Repositories;
 
 public sealed class PartnerRepository : IPartnerRepository
 {
-    private readonly ISqlConnectionFactory _factory;
+    private const string TableName = "Partner";
 
-    public PartnerRepository(ISqlConnectionFactory factory) => _factory = factory;
+    private readonly ISqlConnectionFactory _factory;
+    private readonly IRowAuditWriter _audit;
+
+    public PartnerRepository(ISqlConnectionFactory factory, IRowAuditWriter audit)
+    {
+        _factory = factory;
+        _audit = audit;
+    }
 
     private const string SelectColumns = """
         SELECT p.pkid AS Pkid,
@@ -57,17 +66,35 @@ public sealed class PartnerRepository : IPartnerRepository
     public async Task<short> CreateAsync(PartnerRequest request)
     {
         using var db = _factory.Create();
+        db.Open();
+        using var tx = db.BeginTransaction();
+
         // pkid is smallint IDENTITY: excluded from the column list, returned via SCOPE_IDENTITY().
-        return await db.ExecuteScalarAsync<short>("""
+        var pkid = await db.ExecuteScalarAsync<short>("""
             INSERT INTO Partner (Name, AppKey, NameOnPartnerMenu, NameOnCourseDetailPage, DisplayOrder, ImageFilename)
             VALUES (@Name, @AppKey, @NameOnPartnerMenu, @NameOnCourseDetailPage, @DisplayOrder, @ImageFilename);
             SELECT CAST(SCOPE_IDENTITY() AS smallint);
-            """, request);
+            """, request, tx);
+
+        var created = await GetSnapshotAsync(db, tx, pkid);
+        if (created is not null)
+            await _audit.LogInsertAsync(TableName, created, db, tx);
+
+        tx.Commit();
+        return pkid;
     }
 
     public async Task<bool> UpdateAsync(PartnerRequest request)
     {
         using var db = _factory.Create();
+        db.Open();
+        using var tx = db.BeginTransaction();
+
+        // Load "before" first so the audit row can list exactly the changed columns.
+        var before = await GetSnapshotAsync(db, tx, request.Pkid);
+        if (before is null)
+            return false;
+
         var affected = await db.ExecuteAsync("""
             UPDATE Partner
                SET Name = @Name,
@@ -77,15 +104,38 @@ public sealed class PartnerRepository : IPartnerRepository
                    DisplayOrder = @DisplayOrder,
                    ImageFilename = @ImageFilename
              WHERE pkid = @Pkid;
-            """, request);
-        return affected > 0;
+            """, request, tx);
+
+        if (affected == 0)
+            return false;
+
+        var after = await GetSnapshotAsync(db, tx, request.Pkid);
+        await _audit.LogUpdateAsync(TableName, before, after!, db, tx);
+
+        tx.Commit();
+        return true;
     }
 
     public async Task<bool> DeleteAsync(short pkid)
     {
         using var db = _factory.Create();
-        var affected = await db.ExecuteAsync(
-            "DELETE FROM Partner WHERE pkid = @pkid", new { pkid });
-        return affected > 0;
+        db.Open();
+        using var tx = db.BeginTransaction();
+
+        // Load the row first so its Name is still available for the audit description.
+        var row = await GetSnapshotAsync(db, tx, pkid);
+        if (row is null)
+            return false;
+
+        await db.ExecuteAsync("DELETE FROM Partner WHERE pkid = @pkid", new { pkid }, tx);
+        await _audit.LogDeleteAsync(TableName, row, db, tx);
+
+        tx.Commit();
+        return true;
     }
+
+    /// <summary>Audit snapshot, read inside the caller's transaction.</summary>
+    private static Task<Partner?> GetSnapshotAsync(IDbConnection db, IDbTransaction tx, short pkid) =>
+        db.QuerySingleOrDefaultAsync<Partner?>(
+            $"{SelectColumns} WHERE p.pkid = @pkid", new { pkid }, tx);
 }

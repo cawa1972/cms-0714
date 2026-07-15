@@ -14,6 +14,7 @@ import { LookupItem } from '@core/models/app-role.model';
 import { AppUserService } from '@core/services/app-user.service';
 import { AuthService } from '@core/services/auth.service';
 import { LookupService } from '@core/services/lookup.service';
+import { RowAuditBadge } from '@core/components/row-audit-badge/row-audit-badge';
 
 @Component({
   selector: 'app-app-user-form',
@@ -23,6 +24,7 @@ import { LookupService } from '@core/services/lookup.service';
     CheckboxModule,
     MultiSelectModule,
     ButtonModule,
+    RowAuditBadge,
   ],
   templateUrl: './app-user-form.html',
   styleUrl: './app-user-form.css',
@@ -42,6 +44,9 @@ export class AppUserForm implements OnInit {
   protected readonly saving = signal(false);
   protected readonly resetting = signal(false);
   protected readonly roleOptions = signal<LookupItem[]>([]);
+
+  /** Numeric surrogate pkid of the edited user, for the audit-history badge (null in create mode). */
+  protected readonly auditPkid = signal<number | null>(null);
 
   /** Gates the reset-password action; the backend enforces the same role with 403. */
   protected readonly isAdmin = computed(() => this.auth.hasRole('Admin'));
@@ -66,6 +71,7 @@ export class AppUserForm implements OnInit {
       next: ({ roles, user }) => {
         this.roleOptions.set(roles);
         if (user) {
+          this.auditPkid.set(user.pkid);
           this.form.patchValue({
             userId: user.userId,
             userName: user.userName,

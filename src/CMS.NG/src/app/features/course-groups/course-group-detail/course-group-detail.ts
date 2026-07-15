@@ -5,10 +5,11 @@ import { MessageService } from 'primeng/api';
 
 import { CourseGroup } from '@core/models/course-group.model';
 import { CourseGroupService } from '@core/services/course-group.service';
+import { RowAuditBadge } from '@core/components/row-audit-badge/row-audit-badge';
 
 @Component({
   selector: 'app-course-group-detail',
-  imports: [ButtonModule],
+  imports: [ButtonModule, RowAuditBadge],
   templateUrl: './course-group-detail.html',
   styleUrl: './course-group-detail.css',
 })
