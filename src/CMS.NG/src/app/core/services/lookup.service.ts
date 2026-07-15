@@ -33,4 +33,9 @@ export class LookupService {
   getPublishStatuses(): Observable<LookupItem[]> {
     return this.http.get<LookupItem[]>(`${this.baseUrl}/publish-statuses`);
   }
+
+  /** TrainingCenter options (value = pkid, label = Name). Tabs on the FeaturedPromoItem board. */
+  getTrainingCenters(): Observable<LookupItem[]> {
+    return this.http.get<LookupItem[]>(`${this.baseUrl}/training-centers`);
+  }
 }

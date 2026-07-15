@@ -18,4 +18,7 @@ public interface ILookupRepository
 
     /// <summary>CourseGroup options: value = pkid (as string), label = Description. Ordered by pkid.</summary>
     Task<IEnumerable<LookupItem>> GetCourseGroupsAsync();
+
+    /// <summary>TrainingCenter options: value = pkid (as string), label = Name. Ordered by DisplayOrder.</summary>
+    Task<IEnumerable<LookupItem>> GetTrainingCentersAsync();
 }

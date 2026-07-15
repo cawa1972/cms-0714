@@ -14,6 +14,7 @@ Quick index (which feature to copy):
 | **AppUser** | backend-only, server-managed column (password) | `auth/AppUser.md` |
 | **PublishStatus** | user-assigned (non-IDENTITY) numeric PK + `bit` flags | `admin/PublishStatus.md` |
 | **Course** | multiple FKs resolved via JOIN labels + `date` columns | `course/Course.md` |
+| **FeaturedPromoItem** | custom non-list UI (weekly board), unique-key slot swap, code-lookup endpoint | `custom/FeaturedPromoItem/FeaturedPromoItem.spec.md` |
 
 Common to all: no RowAudit (this repo has none); N-N is delete-then-reinsert in a transaction;
 list pages carry `{entity}-list-filters` / `-sort` / `-page` session keys.
@@ -99,3 +100,28 @@ Deliberately **deferred** (target features/endpoints don't exist yet, documented
 "Deferred" sections): the N-N relations `CourseInCertification` / `CourseJobCategories`
 (Certification & JobCategory have no repos/lookups), and inbound child links (`CourseFAQ`,
 `CourseRelatedLink`, `HotCourse`, `CourseRecomm`).
+
+## FeaturedPromoItem — the custom-UI (weekly board) reference
+
+CRUD for `FeaturedPromoItem` (首頁上稿), sidebar **首頁 Home › 上稿作業 FeaturedPromoItem**. Spec at
+`custom/FeaturedPromoItem/FeaturedPromoItem.spec.md` (+ UI PNGs). The first feature whose frontend
+is **not** the list/detail/form triple — a single board component
+(`features/featured-promo-items/featured-promo-item-board/`) with TrainingCenter tabs, Monday–Sunday
+week navigation, and 3 slots per day edited inline. Things worth copying:
+
+- **Unique composite key with swap.** `(ScheduleOn, TrainingCenter_pkid, Slot)` is UNIQUE. The
+  controller pre-checks `SlotTakenAsync` → **409** on create/update. The `POST /{id}/move?direction=up|down`
+  endpoint swaps with the target slot's occupant inside a transaction via a temporary `Slot = 0`
+  hop so the unique key never collides (`FeaturedPromoItemRepository.MoveSlotAsync`, returns a
+  `MoveSlotResult` enum → 404/400/204).
+- **Code-lookup endpoint.** The form takes a `Promotion2.PromoCode` string, resolved server-side by
+  `GET /api/featured-promo-items/promo-lookup?code=…` → `PromoCodeLookup` (pkid + default
+  Topic/Description) or 404. `save()` in the board re-resolves the code if it changed since the last
+  lookup before create/update.
+- **Board state, not list state.** Session key `featured-promo-item-board-state` stores
+  `{ trainingCenterPkid, weekStartIso }` (no `-filters/-sort/-page` keys — nothing to sort/page).
+  Week math lives in static `mondayOf` / `addDays` helpers on the component (local-midnight dates,
+  serialized with `date.util.ts`'s `toIso`). Copy/paste is an in-memory clipboard signal that
+  prefills the inline editor on an empty slot.
+- `GET /api/lookups/training-centers` (value = pkid, label = Name, ordered by DisplayOrder) feeds
+  the tabs.

@@ -3,6 +3,13 @@ import { Routes } from '@angular/router';
 export const routes: Routes = [
   { path: '', redirectTo: 'app-roles', pathMatch: 'full' },
   {
+    path: 'featured-promo-items',
+    loadComponent: () =>
+      import(
+        './features/featured-promo-items/featured-promo-item-board/featured-promo-item-board'
+      ).then((m) => m.FeaturedPromoItemBoard),
+  },
+  {
     path: 'app-roles',
     loadComponent: () =>
       import('./features/app-roles/app-role-list/app-role-list').then((m) => m.AppRoleList),

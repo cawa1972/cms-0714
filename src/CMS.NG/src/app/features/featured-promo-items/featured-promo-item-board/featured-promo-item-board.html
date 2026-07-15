@@ -1,0 +1,134 @@
+<div class="page-toolbar">
+  <h1 class="page-title">上稿作業 FeaturedPromoItem</h1>
+  <span class="page-subtitle">首頁推廣項目每週排程</span>
+  <span class="spacer"></span>
+</div>
+
+<div class="card">
+  <div class="center-tabs" role="tablist">
+    @for (center of centerOptions(); track center.value) {
+      <button
+        type="button"
+        role="tab"
+        class="center-tab"
+        [class.active]="center.value === selectedCenter()"
+        [attr.aria-selected]="center.value === selectedCenter()"
+        (click)="selectCenter(center.value)"
+      >
+        {{ center.label }}
+      </button>
+    }
+  </div>
+
+  <div class="week-nav">
+    <p-button icon="pi pi-angle-double-left" [text]="true" severity="secondary" pTooltip="上一週" (onClick)="prevWeek()" />
+    <span class="week-label">{{ weekLabel() }}</span>
+    <p-button icon="pi pi-angle-double-right" [text]="true" severity="secondary" pTooltip="下一週" (onClick)="nextWeek()" />
+  </div>
+
+  @for (day of days(); track day.iso) {
+    <div class="day-header">{{ day.label }}</div>
+
+    @for (cell of day.cells; track cell.slot) {
+      @if (isEditing(day.iso, cell.slot)) {
+        <form class="slot-editor" [formGroup]="form" (ngSubmit)="save()">
+          <div class="field">
+            <label [for]="'promoCode-' + day.iso + '-' + cell.slot">PromoCode<span class="required">*</span></label>
+            <div class="promo-row">
+              <input
+                [id]="'promoCode-' + day.iso + '-' + cell.slot"
+                type="text"
+                pInputText
+                class="full-width"
+                placeholder="輸入 Promotion2 促銷代碼"
+                formControlName="promoCode"
+              />
+              <p-button label="查代碼" icon="pi pi-search" severity="secondary" (onClick)="lookupPromo()" />
+            </div>
+            @if (form.controls.promoCode.touched && form.controls.promoCode.invalid) {
+              <div class="field-error">PromoCode 為必填。</div>
+            }
+            @if (resolvedPromo(); as promo) {
+              <div class="promo-hint">已對應促銷 #{{ promo.promotionPkid }}：{{ promo.topic }}</div>
+            }
+          </div>
+
+          <div class="field">
+            <label [for]="'topic-' + day.iso + '-' + cell.slot">Topic<span class="required">*</span></label>
+            <input
+              [id]="'topic-' + day.iso + '-' + cell.slot"
+              type="text"
+              pInputText
+              class="full-width"
+              formControlName="topic"
+            />
+            @if (form.controls.topic.touched && form.controls.topic.invalid) {
+              <div class="field-error">Topic 為必填（最多 100 字）。</div>
+            }
+          </div>
+
+          <div class="field">
+            <label [for]="'description-' + day.iso + '-' + cell.slot">Description<span class="required">*</span></label>
+            <input
+              [id]="'description-' + day.iso + '-' + cell.slot"
+              type="text"
+              pInputText
+              class="full-width"
+              formControlName="description"
+            />
+            @if (form.controls.description.touched && form.controls.description.invalid) {
+              <div class="field-error">Description 為必填（最多 300 字）。</div>
+            }
+          </div>
+
+          <div class="editor-actions">
+            <p-button type="submit" label="儲存" icon="pi pi-check" [loading]="saving()" />
+            <p-button label="取消" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="cancelEdit()" />
+          </div>
+        </form>
+      } @else {
+        <div class="slot-row" [class.empty]="!cell.item">
+          <span class="slot-no">{{ cell.slot }}</span>
+
+          <span class="slot-actions">
+            <p-button
+              icon="pi pi-plus"
+              [text]="true"
+              size="small"
+              severity="secondary"
+              pTooltip="下移版位"
+              [disabled]="!cell.item || cell.slot === 3"
+              (onClick)="move(cell.item!, 'down')"
+            />
+            <p-button
+              icon="pi pi-minus"
+              [text]="true"
+              size="small"
+              severity="secondary"
+              pTooltip="上移版位"
+              [disabled]="!cell.item || cell.slot === 1"
+              (onClick)="move(cell.item!, 'up')"
+            />
+            <p-button label="編輯" [text]="true" size="small" severity="info" (onClick)="startEdit(day, cell)" />
+            @if (cell.item) {
+              <p-button label="複製" [text]="true" size="small" severity="secondary" (onClick)="copy(cell.item)" />
+              <p-button label="刪除" [text]="true" size="small" severity="danger" (onClick)="remove(cell.item, $event)" />
+            } @else if (clipboard()) {
+              <p-button label="貼上" [text]="true" size="small" severity="secondary" (onClick)="paste(day, cell)" />
+            }
+          </span>
+
+          @if (cell.item) {
+            <span class="cell-text promo">{{ cell.item.promoCode }}</span>
+            <span class="cell-text topic">{{ cell.item.topic }}</span>
+            <span class="cell-text desc">{{ cell.item.description }}</span>
+          } @else {
+            <span class="cell-text promo placeholder"></span>
+            <span class="cell-text topic placeholder"></span>
+            <span class="cell-text desc placeholder"></span>
+          }
+        </div>
+      }
+    }
+  }
+</div>
