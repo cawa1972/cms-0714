@@ -87,4 +87,27 @@ describe('CourseDetail', () => {
     const { routerSpy } = setup(throwError(() => new Error('missing')));
     expect(routerSpy.navigate).toHaveBeenCalledWith(['/courses']);
   });
+
+  it('derives the QR code URL from the record pkid and courseId', () => {
+    const { component } = setup();
+    expect(component['qrCodeUrl']()).toBe('https://www.uuu.com.tw/Course/Show/2/AWS-SAA');
+  });
+
+  it('passes courseId as the QR code title', async () => {
+    const { fixture } = setup();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const titleEl: HTMLElement = fixture.nativeElement.querySelector('.qr-code-title');
+    expect(titleEl.textContent?.trim()).toBe('AWS-SAA');
+  });
+
+  it('renders a downloadable QR code image for the course', async () => {
+    const { fixture } = setup();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const img: HTMLImageElement = fixture.nativeElement.querySelector('.qr-code-image');
+    expect(img.src).toMatch(/^data:image\/png;base64,/);
+  });
 });

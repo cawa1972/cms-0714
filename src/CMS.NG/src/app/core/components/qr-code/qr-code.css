@@ -1,0 +1,29 @@
+:host {
+  display: block;
+}
+
+.qr-code {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.qr-code-title {
+  font-weight: 600;
+  color: #334155;
+}
+
+.qr-code-image {
+  width: 160px;
+  height: 160px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 8px;
+  background: #fff;
+}
+
+.qr-code-loading {
+  color: #94a3b8;
+  font-size: 0.85rem;
+}

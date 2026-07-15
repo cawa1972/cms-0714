@@ -1,0 +1,17 @@
+<div class="qr-code">
+  @if (title()) {
+    <div class="qr-code-title">{{ title() }}</div>
+  }
+  @if (dataUrl(); as url) {
+    <img [src]="url" [alt]="title() || value()" class="qr-code-image" />
+    <p-button
+      label="下載 QR Code"
+      icon="pi pi-download"
+      severity="secondary"
+      size="small"
+      (onClick)="download()"
+    />
+  } @else {
+    <div class="qr-code-loading">產生 QR Code 中…</div>
+  }
+</div>

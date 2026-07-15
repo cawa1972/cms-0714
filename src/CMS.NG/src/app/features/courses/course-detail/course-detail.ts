@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { TagModule } from 'primeng/tag';
@@ -7,10 +7,11 @@ import { MessageService } from 'primeng/api';
 
 import { Course } from '@core/models/course.model';
 import { CourseService } from '@core/services/course.service';
+import { QrCode } from '@core/components/qr-code/qr-code';
 
 @Component({
   selector: 'app-course-detail',
-  imports: [ButtonModule, TagModule, DatePipe],
+  imports: [ButtonModule, TagModule, DatePipe, QrCode],
   templateUrl: './course-detail.html',
   styleUrl: './course-detail.css',
 })
@@ -22,6 +23,11 @@ export class CourseDetail implements OnInit {
 
   protected readonly course = signal<Course | null>(null);
   protected readonly loading = signal(true);
+
+  protected readonly qrCodeUrl = computed(() => {
+    const c = this.course();
+    return c ? `https://www.uuu.com.tw/Course/Show/${c.pkid}/${c.courseId}` : '';
+  });
 
   ngOnInit(): void {
     const pkid = Number(this.route.snapshot.paramMap.get('id'));

@@ -75,6 +75,16 @@
         <p-tag [value]="c.canRepeat ? '是' : '否'" [severity]="c.canRepeat ? 'success' : 'secondary'" />
       </div>
     </div>
+    <div class="detail-row">
+      <div class="detail-label">QR Code</div>
+      <div class="detail-value">
+        <app-qr-code
+          [value]="qrCodeUrl()"
+          [title]="c.courseId"
+          [downloadFileName]="c.courseId + '-qrcode.png'"
+        />
+      </div>
+    </div>
   </div>
 
   <div class="card">
