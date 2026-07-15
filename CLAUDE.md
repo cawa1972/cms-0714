@@ -7,6 +7,7 @@ lives in reference files, loaded on demand. **Read the one that matches your tas
 |--------------|------|
 | running the app | `README.md` |
 | writing feature code (backend or frontend) | `spec/conventions.md` — cross-cutting rules + gotchas |
+| adding inline table editing | `spec/conventions.md` — "Inline table editing" + the overlay-editor gotcha |
 | scaffolding a new feature | `spec/reference-features.md` — find the closest built feature to copy (by PK shape, FK/N-N needs, column types) |
 | building a customized (non-standard-UI) feature | `spec/custom/{Feature}/` — hand-written spec + UI mockup PNGs (e.g. FeaturedPromoItem weekly board) |
 | generating from a schema | `spec/code-gen.convention.md` + `spec/feature-spec.template.md` |
