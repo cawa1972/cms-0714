@@ -52,6 +52,24 @@ On success → **200** with the profile (no `PasswordHash`):
 { "userId": "kenny", "userName": "Kenny Lin", "accessToken": "<signed JWT>" }
 ```
 
+### `PUT /api/Auth/profile`
+
+Self-service: the signed-in user edits **their own** display name. **Protected** — reached only with a
+valid bearer token (the `login` action carries `[AllowAnonymous]`; `profile` does not, so the global
+filter guards it). Request body:
+
+```json
+{ "userName": "Helen Wu" }
+```
+
+- The target **UserId is taken from the token's `userId` claim, never the request body** — a user can
+  rename only their own account and can never change their UserId or roles. Any `userId` sent in the
+  body is ignored (the DTO does not bind it).
+- `UserName` is **required** and stored **trimmed**; empty/whitespace-only → **400**.
+- Unknown user row → **404**; missing/invalid token → **401** (global filter).
+- On success → **200** `{ "userId": "helen", "userName": "Helen Wu" }`. The repository writes **only**
+  `AppUser.UserName` (`IAuthRepository.UpdateUserNameAsync`) — roles, IsActive, PasswordHash untouched.
+
 ### JWT structure
 
 - **Algorithm**: HS256, signed with the SysConfig `symmetricSecurityKey` (must be ≥ 32 bytes).
@@ -82,7 +100,8 @@ Applied **globally, then relaxed on Auth** — the reverse of decorating every c
 - In `AddControllers`, an `AuthorizeFilter` built from
   `new AuthorizationPolicyBuilder().RequireAuthenticatedUser()` is added to `options.Filters`, so
   every endpoint requires a valid bearer token by default.
-- `AuthController` carries `[AllowAnonymous]` — the only controller reachable without a token.
+- `AuthController.Login` carries `[AllowAnonymous]` — the only endpoint reachable without a token.
+  (Its sibling `AuthController.UpdateProfile` has no such opt-out, so the global filter protects it.)
 - Any request to a protected endpoint without a valid `Authorization: Bearer <token>` header returns
   **401** (missing, malformed, wrong-signature, or expired token all 401).
 

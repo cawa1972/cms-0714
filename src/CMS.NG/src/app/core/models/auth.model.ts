@@ -13,3 +13,14 @@ export interface AuthProfile {
   userName: string;
   accessToken: string;
 }
+
+/** Body of PUT /api/Auth/profile — the signed-in user editing their own display name. */
+export interface UpdateProfileRequest {
+  userName: string;
+}
+
+/** Returned by PUT /api/Auth/profile: the authenticated identity and the newly stored UserName. */
+export interface UpdateProfileResponse {
+  userId: string;
+  userName: string;
+}

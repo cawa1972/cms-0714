@@ -75,10 +75,14 @@
   <main class="content">
     <header class="app-header">
       <span class="spacer"></span>
-      <div class="app-user">
+      <a class="app-user" routerLink="/profile" routerLinkActive="active" title="個人資料 My Profile">
         <i class="pi pi-user"></i>
         <span class="app-user-name">{{ userName() ?? '—' }}</span>
-      </div>
+      </a>
+      <a class="profile-link" routerLink="/profile" routerLinkActive="active">
+        <i class="pi pi-id-card"></i>
+        <span>個人資料 My Profile</span>
+      </a>
       <button type="button" class="logout-btn" (click)="logout()">
         <i class="pi pi-sign-out"></i>
         <span>登出 Logout</span>

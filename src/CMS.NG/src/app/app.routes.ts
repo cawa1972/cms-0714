@@ -20,6 +20,10 @@ function appRoutes(): Routes {
   return [
   { path: '', redirectTo: 'app-roles', pathMatch: 'full' },
   {
+    path: 'profile',
+    loadComponent: () => import('./features/profile/profile').then((m) => m.Profile),
+  },
+  {
     path: 'featured-promo-items',
     loadComponent: () =>
       import(

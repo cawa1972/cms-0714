@@ -10,4 +10,11 @@ public interface IAuthRepository
     /// is never leaked.
     /// </summary>
     Task<AppUserCredential?> GetCredentialAsync(string userId);
+
+    /// <summary>
+    /// Updates <b>only</b> the <c>UserName</c> for the given UserId (self-service profile edit).
+    /// Touches no other column — roles, IsActive, and PasswordHash are never affected. Returns false
+    /// if no such user exists.
+    /// </summary>
+    Task<bool> UpdateUserNameAsync(string userId, string userName);
 }
