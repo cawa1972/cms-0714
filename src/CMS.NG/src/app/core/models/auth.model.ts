@@ -24,3 +24,13 @@ export interface UpdateProfileResponse {
   userId: string;
   userName: string;
 }
+
+/**
+ * Body of POST /api/Auth/change-password — the signed-in user changing their own password.
+ * Plain passwords only (over TLS); no hash ever crosses the API boundary.
+ */
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
+  confirmNewPassword: string;
+}

@@ -4,6 +4,7 @@ import { Observable, tap } from 'rxjs';
 import { environment } from '@env/environment';
 import {
   AuthProfile,
+  ChangePasswordRequest,
   LoginRequest,
   UpdateProfileResponse,
 } from '@core/models/auth.model';
@@ -48,6 +49,14 @@ export class AuthService {
     return this.http
       .put<UpdateProfileResponse>(this.profileUrl, { userName })
       .pipe(tap((res) => this.applyUserName(res.userName)));
+  }
+
+  /**
+   * Change the signed-in user's own password. The backend takes the UserId from the JWT and verifies
+   * the current password server-side; nothing about the session (token, profile) changes on success.
+   */
+  changePassword(request: ChangePasswordRequest): Observable<void> {
+    return this.http.post<void>(`${environment.apiBaseUrl}/Auth/change-password`, request);
   }
 
   /** Current access token, or null when signed out. */

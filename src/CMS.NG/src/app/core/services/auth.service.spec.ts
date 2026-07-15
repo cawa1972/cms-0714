@@ -125,6 +125,30 @@ describe('AuthService', () => {
     req.flush({ userId: 'helen', userName: 'Helen Wu' });
   });
 
+  it('changePassword POSTs the three password fields to /Auth/change-password', () => {
+    signIn(service, httpMock, 'Helen Chen');
+
+    service
+      .changePassword({
+        currentPassword: 'old-pw',
+        newPassword: 'Abcdefg1',
+        confirmNewPassword: 'Abcdefg1',
+      })
+      .subscribe();
+
+    const req = httpMock.expectOne(`${environment.apiBaseUrl}/Auth/change-password`);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({
+      currentPassword: 'old-pw',
+      newPassword: 'Abcdefg1',
+      confirmNewPassword: 'Abcdefg1',
+    });
+    req.flush(null, { status: 204, statusText: 'No Content' });
+
+    // The session (token + profile) is untouched by a password change.
+    expect(service.userName()).toBe('Helen Chen');
+  });
+
   it('updateUserName refreshes the userName signal and session storage, keeping the token', () => {
     const token = signIn(service, httpMock, 'Helen Chen');
 

@@ -35,4 +35,27 @@ public sealed class FakeAuthRepository : IAuthRepository
         credential.UserName = userName;
         return Task.FromResult(true);
     }
+
+    /// <summary>The UserId passed to the most recent <see cref="UpdatePasswordAsync"/> call (or null).</summary>
+    public string? PasswordUpdatedUserId { get; private set; }
+
+    /// <summary>The hash passed to the most recent <see cref="UpdatePasswordAsync"/> call (or null).</summary>
+    public string? UpdatedPasswordHash { get; private set; }
+
+    /// <summary>When the last successful password update happened (mirrors SQL's GETDATE() stamp).</summary>
+    public DateTime? PasswordUpdatedTime { get; private set; }
+
+    public Task<bool> UpdatePasswordAsync(string userId, string passwordHash)
+    {
+        PasswordUpdatedUserId = userId;
+        UpdatedPasswordHash = passwordHash;
+
+        var credential = _credentials.FirstOrDefault(c => c.UserId == userId);
+        if (credential is null)
+            return Task.FromResult(false);
+
+        credential.PasswordHash = passwordHash;
+        PasswordUpdatedTime = DateTime.UtcNow;
+        return Task.FromResult(true);
+    }
 }

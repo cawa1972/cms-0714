@@ -40,4 +40,18 @@ public sealed class AuthRepository : IAuthRepository
 
         return affected > 0;
     }
+
+    public async Task<bool> UpdatePasswordAsync(string userId, string passwordHash)
+    {
+        using var db = _factory.Create();
+
+        var affected = await db.ExecuteAsync("""
+            UPDATE AppUser
+               SET PasswordHash = @passwordHash,
+                   PasswordUpdatedTime = GETDATE()
+             WHERE UserId = @userId
+            """, new { userId, passwordHash });
+
+        return affected > 0;
+    }
 }

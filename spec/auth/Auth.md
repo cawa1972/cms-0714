@@ -70,6 +70,30 @@ filter guards it). Request body:
 - On success → **200** `{ "userId": "helen", "userName": "Helen Wu" }`. The repository writes **only**
   `AppUser.UserName` (`IAuthRepository.UpdateUserNameAsync`) — roles, IsActive, PasswordHash untouched.
 
+### `POST /api/Auth/change-password`
+
+Self-service: the signed-in user changes **their own** password. **Protected** (global filter); the
+target UserId comes from the token's `userId` claim, never the body. Request body:
+
+```json
+{ "currentPassword": "……", "newPassword": "……", "confirmNewPassword": "……" }
+```
+
+Checks run in order; each failure → **400** with a bilingual `message` and **nothing is written**:
+
+1. `SHA256(currentPassword)` must equal the stored `PasswordHash`
+   (`目前密碼錯誤。(Current password is incorrect.)`).
+2. New-password complexity (`Security/PasswordPolicy`): length ≥ 8 **and** ≥ 3 of the 4 classes —
+   uppercase / lowercase / digit / symbol
+   (`密碼長度至少需 8 碼，且內容須至少包含四種字元的其中三種：大寫英文／小寫英文／數字／符號 …`).
+3. `newPassword` must equal `confirmNewPassword`
+   (`新密碼與確認密碼不一致。(New password and confirmation do not match.)`).
+
+On success → **204**: `PasswordHash = SHA256(newPassword)` and `PasswordUpdatedTime = GETDATE()`
+(`IAuthRepository.UpdatePasswordAsync`). Passwords travel plain (over TLS) and are never trimmed;
+**no hash ever crosses the API boundary** in either direction. The Angular Profile page mirrors the
+complexity rule client-side (same bilingual message) and shows the server `message` on 400.
+
 ### JWT structure
 
 - **Algorithm**: HS256, signed with the SysConfig `symmetricSecurityKey` (must be ≥ 32 bytes).
