@@ -8,6 +8,7 @@ lives in reference files, loaded on demand. **Read the one that matches your tas
 | running the app | `README.md` |
 | writing feature code (backend or frontend) | `spec/conventions.md` — cross-cutting rules + gotchas |
 | scaffolding a new feature | `spec/reference-features.md` — find the closest built feature to copy (by PK shape, FK/N-N needs, column types) |
+| building a customized (non-standard-UI) feature | `spec/custom/{Feature}/` — hand-written spec + UI mockup PNGs (e.g. FeaturedPromoItem weekly board) |
 | generating from a schema | `spec/code-gen.convention.md` + `spec/feature-spec.template.md` |
 | wanting a worked example | `spec/sample1.spec.md` (Course) · `spec/sample2.spec.md` (SkillTrain) |
 
@@ -19,6 +20,7 @@ following the specs above. No RowAudit — this repo has none.
 ```
 database/          *.sql schema (source of truth for models)
 spec/              conventions, feature-spec template, sample specs, reference-features.md, UI PNGs
+  custom/          hand-written specs for customized features (one folder per feature, with mockups)
 src/
   CMS.sln
   CMS.API/         .NET 9 Web API — Dapper (no EF), Swagger, CORS. Port 5000.
