@@ -53,6 +53,7 @@ dotnet test src/CMS.sln
 # Frontend
 cd src/CMS.NG && npm test        # Karma + Jasmine (ng test)
 # CI/headless: ng test --watch=false --browsers=ChromeHeadless
+# Production build: ng build
 ```
 
 Current status: backend **12/12** xUnit tests pass; frontend **28/28** Karma tests pass.

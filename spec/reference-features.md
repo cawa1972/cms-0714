@@ -2,7 +2,7 @@
 
 The catalogue of already-built CRUD features. When scaffolding a new one, **copy the closest match**
 and adapt. Each entry lists only the non-obvious things — the parts easy to get wrong. General
-conventions live in `code-gen.convention.md` and `../CLAUDE.md`; this file is loaded on demand, not
+conventions live in `code-gen.convention.md` and `conventions.md`; this file is loaded on demand, not
 every session.
 
 Quick index (which feature to copy):
