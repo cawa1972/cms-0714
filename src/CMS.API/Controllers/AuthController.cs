@@ -7,11 +7,11 @@ using Microsoft.AspNetCore.Mvc;
 namespace CMS.API.Controllers;
 
 /// <summary>
-/// Login endpoint. Marked <see cref="AllowAnonymousAttribute"/> so it stays reachable without a
-/// token even though authorization is required globally for every other controller.
+/// Authentication endpoints. <c>login</c> is <see cref="AllowAnonymousAttribute"/> so it stays
+/// reachable without a token; <c>profile</c> carries no such opt-out, so the global authorization
+/// filter protects it — the signed-in user is identified from the JWT, never the request body.
 /// </summary>
 [ApiController]
-[AllowAnonymous]
 [Route("api/[controller]")]
 public class AuthController : ControllerBase
 {
@@ -36,6 +36,7 @@ public class AuthController : ControllerBase
     /// Authenticates a user against the AppUser table and returns a profile with a signed JWT.
     /// Returns 401 (generic message) if the user is unknown, inactive, or the password is wrong.
     /// </summary>
+    [AllowAnonymous]
     [HttpPost("login")]
     public async Task<ActionResult<LoginResponse>> Login([FromBody] LoginRequest request)
     {
@@ -66,5 +67,31 @@ public class AuthController : ControllerBase
             UserName = credential.UserName,
             AccessToken = accessToken,
         });
+    }
+
+    /// <summary>
+    /// Updates the signed-in user's own display name (UserName). The target UserId is taken from the
+    /// authenticated token's <see cref="JwtClaims.UserId"/> claim — never from the request body — so a
+    /// user can rename only their own account and can never change their UserId or roles. Protected by
+    /// the global authorization filter (no <c>[AllowAnonymous]</c> here).
+    /// </summary>
+    [HttpPut("profile")]
+    public async Task<ActionResult<UpdateProfileResponse>> UpdateProfile([FromBody] UpdateProfileRequest request)
+    {
+        // Identity comes solely from the validated JWT; the request body carries no UserId.
+        var userId = User.FindFirst(JwtClaims.UserId)?.Value;
+        if (string.IsNullOrEmpty(userId))
+            return Unauthorized();
+
+        // UserName is required and stored trimmed; whitespace-only is rejected (Required alone allows it).
+        var userName = (request.UserName ?? string.Empty).Trim();
+        if (userName.Length == 0)
+            return BadRequest(new { message = "UserName is required." });
+
+        var updated = await _repository.UpdateUserNameAsync(userId, userName);
+        if (!updated)
+            return NotFound();
+
+        return Ok(new UpdateProfileResponse { UserId = userId, UserName = userName });
     }
 }

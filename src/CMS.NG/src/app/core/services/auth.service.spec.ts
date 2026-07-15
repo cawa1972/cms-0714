@@ -100,4 +100,56 @@ describe('AuthService', () => {
 
     expect(service.roles()).toEqual(['Admin']);
   });
+
+  it('exposes the signed-in userId', () => {
+    const profile: AuthProfile = {
+      userId: 'helen',
+      userName: 'Helen Chen',
+      accessToken: makeJwt({ userId: 'helen' }),
+    };
+    service.login({ userId: 'helen', password: 'pw' }).subscribe();
+    httpMock.expectOne(loginUrl).flush(profile);
+
+    expect(service.userId()).toBe('helen');
+  });
+
+  it('updateUserName PUTs only { userName } to /Auth/profile', () => {
+    signIn(service, httpMock, 'Helen Chen');
+
+    service.updateUserName('Helen Wu').subscribe();
+
+    const req = httpMock.expectOne(`${environment.apiBaseUrl}/Auth/profile`);
+    expect(req.request.method).toBe('PUT');
+    expect(req.request.body).toEqual({ userName: 'Helen Wu' });
+    expect('userId' in (req.request.body as object)).toBeFalse();
+    req.flush({ userId: 'helen', userName: 'Helen Wu' });
+  });
+
+  it('updateUserName refreshes the userName signal and session storage, keeping the token', () => {
+    const token = signIn(service, httpMock, 'Helen Chen');
+
+    service.updateUserName('Helen Wu').subscribe();
+    httpMock
+      .expectOne(`${environment.apiBaseUrl}/Auth/profile`)
+      .flush({ userId: 'helen', userName: 'Helen Wu' });
+
+    // The signal the app shell binds to reflects the new name.
+    expect(service.userName()).toBe('Helen Wu');
+
+    // Session storage is rewritten with the new name, keeping the same token + userId.
+    const persisted = JSON.parse(sessionStorage.getItem(STORAGE_KEY)!) as AuthProfile;
+    expect(persisted.userName).toBe('Helen Wu');
+    expect(persisted.userId).toBe('helen');
+    expect(persisted.accessToken).toBe(token);
+  });
 });
+
+/** Log a user in via the real login flow and return the token used, so tests can share setup. */
+function signIn(service: AuthService, httpMock: HttpTestingController, userName: string): string {
+  const token = makeJwt({ userId: 'helen', role: ['Admin'] });
+  service.login({ userId: 'helen', password: 'pw' }).subscribe();
+  httpMock
+    .expectOne(`${environment.apiBaseUrl}/Auth/login`)
+    .flush({ userId: 'helen', userName, accessToken: token } satisfies AuthProfile);
+  return token;
+}

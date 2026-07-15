@@ -220,9 +220,36 @@
   color: #334155;
   font-size: 0.9rem;
   font-weight: 600;
+  text-decoration: none;
+}
+
+.app-user:hover {
+  color: #059669;
 }
 
 .app-user .pi {
+  color: #059669;
+}
+
+.profile-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 0.4rem 0.75rem;
+  color: #475569;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.profile-link:hover,
+.profile-link.active {
+  background: #ecfdf5;
+  border-color: #a7f3d0;
   color: #059669;
 }
 

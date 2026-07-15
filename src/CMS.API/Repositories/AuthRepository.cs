@@ -28,4 +28,16 @@ public sealed class AuthRepository : IAuthRepository
         credential.RoleIds = roleIds.ToList();
         return credential;
     }
+
+    public async Task<bool> UpdateUserNameAsync(string userId, string userName)
+    {
+        using var db = _factory.Create();
+
+        // Only UserName is written; UserId is the WHERE key, never a SET target.
+        var affected = await db.ExecuteAsync(
+            "UPDATE AppUser SET UserName = @userName WHERE UserId = @userId",
+            new { userId, userName });
+
+        return affected > 0;
+    }
 }
