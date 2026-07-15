@@ -23,6 +23,26 @@ export const routes: Routes = [
       import('./features/app-roles/app-role-form/app-role-form').then((m) => m.AppRoleForm),
   },
   {
+    path: 'app-users',
+    loadComponent: () =>
+      import('./features/app-users/app-user-list/app-user-list').then((m) => m.AppUserList),
+  },
+  {
+    path: 'app-users/new',
+    loadComponent: () =>
+      import('./features/app-users/app-user-form/app-user-form').then((m) => m.AppUserForm),
+  },
+  {
+    path: 'app-users/:id',
+    loadComponent: () =>
+      import('./features/app-users/app-user-detail/app-user-detail').then((m) => m.AppUserDetail),
+  },
+  {
+    path: 'app-users/:id/edit',
+    loadComponent: () =>
+      import('./features/app-users/app-user-form/app-user-form').then((m) => m.AppUserForm),
+  },
+  {
     path: 'publish-statuses',
     loadComponent: () =>
       import('./features/publish-statuses/publish-status-list/publish-status-list').then(
@@ -69,6 +89,26 @@ export const routes: Routes = [
     path: 'partners/:id/edit',
     loadComponent: () =>
       import('./features/partners/partner-form/partner-form').then((m) => m.PartnerForm),
+  },
+  {
+    path: 'courses',
+    loadComponent: () =>
+      import('./features/courses/course-list/course-list').then((m) => m.CourseList),
+  },
+  {
+    path: 'courses/new',
+    loadComponent: () =>
+      import('./features/courses/course-form/course-form').then((m) => m.CourseForm),
+  },
+  {
+    path: 'courses/:id',
+    loadComponent: () =>
+      import('./features/courses/course-detail/course-detail').then((m) => m.CourseDetail),
+  },
+  {
+    path: 'courses/:id/edit',
+    loadComponent: () =>
+      import('./features/courses/course-form/course-form').then((m) => m.CourseForm),
   },
   {
     path: 'course-groups',

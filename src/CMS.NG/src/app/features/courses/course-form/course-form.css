@@ -1,0 +1,15 @@
+:host {
+  display: block;
+}
+
+.field-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+textarea.full-width {
+  width: 100%;
+  resize: vertical;
+}

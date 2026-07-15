@@ -1,0 +1,118 @@
+<div class="page-toolbar">
+  <h1 class="page-title">檢視課程</h1>
+  <span class="spacer"></span>
+  <p-button label="返回" icon="pi pi-arrow-left" severity="secondary" (onClick)="back()" />
+  <p-button label="編輯" icon="pi pi-pencil" (onClick)="edit()" [disabled]="!course()" />
+</div>
+
+@if (course(); as c) {
+  <div class="card">
+    <h2 class="card-title">基本資料</h2>
+
+    <div class="detail-row">
+      <div class="detail-label">主代碼</div>
+      <div class="detail-value">{{ c.pkid }}</div>
+    </div>
+    <div class="detail-row">
+      <div class="detail-label">顯示順序</div>
+      <div class="detail-value">{{ c.displayOrder }}</div>
+    </div>
+    <div class="detail-row">
+      <div class="detail-label">課程名稱</div>
+      <div class="detail-value">{{ c.title }}</div>
+    </div>
+    <div class="detail-row">
+      <div class="detail-label">官方課程名稱</div>
+      <div class="detail-value">{{ c.officialTitle || '—' }}</div>
+    </div>
+    <div class="detail-row">
+      <div class="detail-label">簡介代碼</div>
+      <div class="detail-value">{{ c.courseId }}</div>
+    </div>
+    <div class="detail-row">
+      <div class="detail-label">科目代碼</div>
+      <div class="detail-value">{{ c.prodCourseId }}</div>
+    </div>
+    <div class="detail-row">
+      <div class="detail-label">友善網址</div>
+      <div class="detail-value">{{ c.friendlyUrl }}</div>
+    </div>
+    <div class="detail-row">
+      <div class="detail-label">原廠</div>
+      <div class="detail-value">{{ c.partnerName }}</div>
+    </div>
+    <div class="detail-row">
+      <div class="detail-label">課程群組</div>
+      <div class="detail-value">{{ c.courseGroupDescription || '—' }}</div>
+    </div>
+    <div class="detail-row">
+      <div class="detail-label">上架狀態</div>
+      <div class="detail-value">{{ c.publishStatusDescription }}</div>
+    </div>
+    <div class="detail-row">
+      <div class="detail-label">上架日期</div>
+      <div class="detail-value">{{ c.scheduleOn | date: 'yyyy/MM/dd' }}</div>
+    </div>
+    <div class="detail-row">
+      <div class="detail-label">下架日期</div>
+      <div class="detail-value">{{ c.scheduleOff | date: 'yyyy/MM/dd' }}</div>
+    </div>
+    <div class="detail-row">
+      <div class="detail-label">時數</div>
+      <div class="detail-value">{{ c.hour }}</div>
+    </div>
+    <div class="detail-row">
+      <div class="detail-label">定價</div>
+      <div class="detail-value">{{ c.listPrice }}</div>
+    </div>
+    <div class="detail-row">
+      <div class="detail-label">點數</div>
+      <div class="detail-value">{{ c.learningCredit }}</div>
+    </div>
+    <div class="detail-row">
+      <div class="detail-label">允許重聽</div>
+      <div class="detail-value">
+        <p-tag [value]="c.canRepeat ? '是' : '否'" [severity]="c.canRepeat ? 'success' : 'secondary'" />
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2 class="card-title">課程內容</h2>
+
+    <div class="detail-row">
+      <div class="detail-label">教材</div>
+      <div class="detail-value detail-text">{{ c.material || '—' }}</div>
+    </div>
+    <div class="detail-row">
+      <div class="detail-label">課程目標</div>
+      <div class="detail-value detail-text">{{ c.objective || '—' }}</div>
+    </div>
+    <div class="detail-row">
+      <div class="detail-label">適合對象</div>
+      <div class="detail-value detail-text">{{ c.target || '—' }}</div>
+    </div>
+    <div class="detail-row">
+      <div class="detail-label">先備知識</div>
+      <div class="detail-value detail-text">{{ c.prerequisites || '—' }}</div>
+    </div>
+    <div class="detail-row">
+      <div class="detail-label">課程大綱</div>
+      <div class="detail-value detail-text">{{ c.outline || '—' }}</div>
+    </div>
+    <div class="detail-row">
+      <div class="detail-label">考試／認證說明</div>
+      <div class="detail-value detail-text">{{ c.towardCertOrExam || '—' }}</div>
+    </div>
+    <div class="detail-row">
+      <div class="detail-label">備註</div>
+      <div class="detail-value detail-text">{{ c.note || '—' }}</div>
+    </div>
+    <div class="detail-row">
+      <div class="detail-label">其他資訊</div>
+      <div class="detail-value detail-text">{{ c.otherInfo || '—' }}</div>
+    </div>
+  </div>
+} @else if (!loading()) {
+  <div class="card text-muted">找不到課程資料。</div>
+}

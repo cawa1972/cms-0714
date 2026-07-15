@@ -21,6 +21,17 @@ public sealed class LookupRepository : ILookupRepository
             """);
     }
 
+    public async Task<IEnumerable<LookupItem>> GetAppRolesAsync()
+    {
+        using var db = _factory.Create();
+        return await db.QueryAsync<LookupItem>("""
+            SELECT RoleId AS Value,
+                   RoleName + ' (' + RoleId + ')' AS Label
+            FROM AppRole
+            ORDER BY RoleName ASC
+            """);
+    }
+
     public async Task<IEnumerable<LookupItem>> GetPublishStatusesAsync()
     {
         using var db = _factory.Create();

@@ -7,6 +7,9 @@ public interface ILookupRepository
     /// <summary>AppUser options: value = UserId, label = "UserName (UserId)". Ordered by UserName.</summary>
     Task<IEnumerable<LookupItem>> GetAppUsersAsync();
 
+    /// <summary>AppRole options: value = RoleId, label = "RoleName (RoleId)". Ordered by RoleName.</summary>
+    Task<IEnumerable<LookupItem>> GetAppRolesAsync();
+
     /// <summary>PublishStatus options: value = pkid (as string), label = Description. Ordered by pkid.</summary>
     Task<IEnumerable<LookupItem>> GetPublishStatusesAsync();
 

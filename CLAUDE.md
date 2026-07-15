@@ -1,7 +1,9 @@
 # CLAUDE.md
 
-Guidance for working in this repo. See `README.md` for run instructions and `spec/` for the
-code-generation conventions that drive every feature.
+Guidance for working in this repo. See `README.md` for run instructions, `spec/` for the
+code-generation conventions that drive every feature, and **`spec/reference-features.md` for the
+catalogue of built features** — read that when scaffolding a new feature to find the closest one to
+copy (by PK shape, FK/N-N needs, column types).
 
 ## What this is
 
@@ -11,7 +13,7 @@ following `spec/code-gen.convention.md` + `spec/feature-spec.template.md`. Worke
 
 ```
 database/          *.sql schema (source of truth for models)
-spec/              conventions, feature-spec template, sample specs, UI reference PNGs
+spec/              conventions, feature-spec template, sample specs, reference-features.md, UI PNGs
 src/
   CMS.sln
   CMS.API/         .NET 9 Web API — Dapper (no EF), Swagger, CORS. Port 5000.
@@ -25,13 +27,13 @@ global.json        pins the .NET 9 SDK (9.0.314)
 ```bash
 # Backend
 cd src/CMS.API && dotnet run           # http://localhost:5000 (Swagger at /swagger)
-dotnet test src/CMS.sln                # 25 xUnit tests
+dotnet test src/CMS.sln                # xUnit controller tests
 
 # Frontend
 cd src/CMS.NG && npm install           # first time
 npm start                              # ng serve on http://localhost:4200
 npm test                               # Karma + Jasmine (interactive)
-ng test --watch=false --browsers=ChromeHeadless   # 51 tests, headless/CI
+ng test --watch=false --browsers=ChromeHeadless   # headless/CI
 ng build                               # production build
 ```
 
@@ -52,9 +54,10 @@ ng build                               # production build
   a baseline for future `date`/`time(7)` columns.
 - **N-N relationships:** delete-then-reinsert inside a transaction on create/update; read via a
   separate query on the same connection. See `AppRoleRepository.SyncUsersAsync`.
-- **`nchar(n)` columns:** always `RTRIM()` in SELECTs (none in AppRole yet, but the rule stands).
-- **Tests** exercise the controllers against `FakeAppRoleRepository` (no live DB needed), so they
-  cover list/filter/view/add/edit/delete + 404/409 semantics without a SQL Server dependency.
+- **`nchar(n)` columns:** always `RTRIM()` in SELECTs.
+- **Tests** exercise the controllers against in-memory fake repositories (e.g.
+  `FakeAppRoleRepository`), covering list/filter/view/add/edit/delete + 404/409 semantics with no
+  SQL Server dependency.
 
 ## Frontend conventions
 
@@ -74,35 +77,23 @@ ng build                               # production build
 - **List pages:** sortable/paginated `p-table`, `p-drawer` filter, and session-storage keys
   `{entity}-list-filters` / `-sort` / `-page`. `p-select` in drawers uses `appendTo="body"`.
 - **Form pages:** reactive forms, `forkJoin` for parallel lookups on init, `p-multiselect` for N-N.
+- **Dates:** display API `datetime` values by appending `'Z'` to the ISO string before formatting
+  (Dapper returns `Kind=Unspecified`). For `date` columns use `core/utils/date.util.ts`.
 
-## AppRole — the reference feature
+## Reference features
 
-CRUD for `AppRole` (角色), sidebar **系統管理 Admin › 角色 AppRole**. Use it as the template for the
-next feature. Two things about it are non-obvious and easy to get wrong:
+When scaffolding a new feature, copy the closest existing one — full per-feature gotchas are in
+**`spec/reference-features.md`**. Index:
 
-- **`RoleId` (nvarchar) is the primary key**, not `pkid`. `pkid` is an IDENTITY surrogate shown as
-  主代碼. All get/update/delete operations key by `RoleId`; the client wraps it in
-  `encodeURIComponent`. This is the general "string PK" pattern from the convention.
-- **The N-N to AppUser (`AppUserRole`) joins on string keys** (`UserId`, `RoleId`), not pkids. The
-  user multiselect carries `UserId` strings; option label is `UserName (UserId)`.
+| Feature | Copy it for |
+|---------|-------------|
+| **Partner** | standard `int`/`smallint` IDENTITY PK — the baseline |
+| **AppRole** | string (`nvarchar`) PK + N-N joined on string keys |
+| **AppUser** | backend-only, server-managed column (password from SysConfig + reset endpoint) |
+| **PublishStatus** | user-assigned (non-IDENTITY) numeric PK + `bit` flags |
+| **Course** | multiple FKs resolved via JOIN labels + `date` columns |
 
-## PublishStatus — the "user-assigned numeric PK" reference
-
-CRUD for `PublishStatus` (發布狀態), sidebar **系統管理 Admin › 發布狀態 PublishStatus**. Spec at
-`spec/admin/PublishStatus.md`. The one non-obvious thing:
-
-- **`pkid` is a `tinyint` primary key that is NOT an IDENTITY column** — it is user-assigned. This is
-  the numeric analogue of AppRole's string-PK pattern. Consequences: the INSERT writes `pkid`
-  explicitly (no `SCOPE_IDENTITY()`); `CreateAsync` returns `Task`, and the controller pre-checks
-  `ExistsAsync(pkid)` → **409** on a duplicate; `pkid` is editable in the New form but
-  `.disable()`d in Edit (use `getRawValue()` on save); C# `byte`, TS `number` (no
-  `encodeURIComponent` needed for numeric route params).
-- No FKs and no N-N, so the form skips `forkJoin` lookups. The three `bit` flags render as
-  `p-checkbox [binary]` in the form, colored `p-tag` (是/否) in list + detail, and tri-state
-  `p-select` (全部/是/否 → `null`/`true`/`false`) filters in the list drawer.
-- A **lookup endpoint** `GET /api/lookups/publish-statuses` (value = pkid string, label =
-  Description) is provided because `Course.PublishStatus_pkid` targets this table, even though the
-  feature has no FKs of its own.
+No RowAudit — this repo has none.
 
 ## Gotchas
 

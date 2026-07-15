@@ -1,0 +1,8 @@
+:host {
+  display: block;
+}
+
+.detail-text {
+  white-space: pre-wrap;
+  word-break: break-word;
+}

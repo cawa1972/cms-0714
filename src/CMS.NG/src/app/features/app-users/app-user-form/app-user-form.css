@@ -1,0 +1,21 @@
+:host {
+  display: block;
+}
+
+::ng-deep .full-width {
+  width: 100%;
+}
+
+.hint {
+  margin-top: 8px;
+  font-size: 0.85rem;
+}
+
+.hint .pi {
+  margin-right: 4px;
+}
+
+/* Wrap the n-n role chips instead of truncating. */
+::ng-deep .p-multiselect .p-multiselect-label {
+  white-space: normal;
+}

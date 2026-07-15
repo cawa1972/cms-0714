@@ -17,6 +17,11 @@ public class LookupsController : ControllerBase
     public async Task<ActionResult<IEnumerable<LookupItem>>> GetAppUsers()
         => Ok(await _repository.GetAppUsersAsync());
 
+    /// <summary>AppRole options for the user's role multiselect.</summary>
+    [HttpGet("app-roles")]
+    public async Task<ActionResult<IEnumerable<LookupItem>>> GetAppRoles()
+        => Ok(await _repository.GetAppRolesAsync());
+
     /// <summary>PublishStatus options (value = pkid, label = Description). FK target for Course.</summary>
     [HttpGet("publish-statuses")]
     public async Task<ActionResult<IEnumerable<LookupItem>>> GetPublishStatuses()

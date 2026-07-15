@@ -1,0 +1,221 @@
+<div class="page-toolbar">
+  <h1 class="page-title">課程 Course</h1>
+  <span class="page-subtitle">訓練課程主資料</span>
+  <span class="spacer"></span>
+  <p-button label="搜尋條件" icon="pi pi-filter" severity="secondary" (onClick)="drawerVisible.set(true)" />
+  <p-button label="新增" icon="pi pi-plus" severity="success" (onClick)="add()" />
+</div>
+
+<div class="card">
+  <p-table
+    [value]="courses()"
+    [loading]="loading()"
+    [paginator]="true"
+    [rows]="rows"
+    [first]="first"
+    [rowsPerPageOptions]="[10, 20, 50]"
+    [showCurrentPageReport]="true"
+    currentPageReportTemplate="{first}–{last} 筆，共 {totalRecords} 筆"
+    [sortField]="sortField"
+    [sortOrder]="sortOrder"
+    (onSort)="onSort($event)"
+    (onPage)="onPage($event)"
+    dataKey="pkid"
+    styleClass="p-datatable-striped p-datatable-gridlines"
+  >
+    <ng-template pTemplate="header">
+      <tr>
+        <th pSortableColumn="pkid" style="width: 6rem">主代碼 <p-sortIcon field="pkid" /></th>
+        <th pSortableColumn="displayOrder" style="width: 7rem">顯示順序 <p-sortIcon field="displayOrder" /></th>
+        <th pSortableColumn="courseId" style="width: 9rem">簡介代碼 <p-sortIcon field="courseId" /></th>
+        <th pSortableColumn="prodCourseId" style="width: 9rem">科目代碼 <p-sortIcon field="prodCourseId" /></th>
+        <th pSortableColumn="title">課程名稱 <p-sortIcon field="title" /></th>
+        <th pSortableColumn="partnerName" style="width: 10rem">原廠 <p-sortIcon field="partnerName" /></th>
+        <th pSortableColumn="courseGroupDescription" style="width: 10rem">課程群組 <p-sortIcon field="courseGroupDescription" /></th>
+        <th pSortableColumn="publishStatusDescription" style="width: 9rem">上架狀態 <p-sortIcon field="publishStatusDescription" /></th>
+        <th pSortableColumn="scheduleOn" style="width: 9rem">上架日期 <p-sortIcon field="scheduleOn" /></th>
+        <th pSortableColumn="scheduleOff" style="width: 9rem">下架日期 <p-sortIcon field="scheduleOff" /></th>
+        <th pSortableColumn="hour" style="width: 6rem">時數 <p-sortIcon field="hour" /></th>
+        <th pSortableColumn="listPrice" style="width: 7rem">定價 <p-sortIcon field="listPrice" /></th>
+        <th pSortableColumn="learningCredit" style="width: 6rem">點數 <p-sortIcon field="learningCredit" /></th>
+        <th pSortableColumn="canRepeat" style="width: 7rem">允許重聽 <p-sortIcon field="canRepeat" /></th>
+        <th style="width: 10rem; text-align: center">操作</th>
+      </tr>
+    </ng-template>
+
+    <ng-template pTemplate="body" let-course>
+      <tr>
+        <td>{{ course.pkid }}</td>
+        <td>{{ course.displayOrder }}</td>
+        <td>{{ course.courseId }}</td>
+        <td>{{ course.prodCourseId }}</td>
+        <td>{{ course.title }}</td>
+        <td>{{ course.partnerName }}</td>
+        <td>{{ course.courseGroupDescription || '—' }}</td>
+        <td>{{ course.publishStatusDescription }}</td>
+        <td>{{ course.scheduleOn | date: 'yyyy/MM/dd' }}</td>
+        <td>{{ course.scheduleOff | date: 'yyyy/MM/dd' }}</td>
+        <td>{{ course.hour }}</td>
+        <td>{{ course.listPrice }}</td>
+        <td>{{ course.learningCredit }}</td>
+        <td>
+          <p-tag
+            [value]="course.canRepeat ? '是' : '否'"
+            [severity]="course.canRepeat ? 'success' : 'secondary'"
+          />
+        </td>
+        <td style="text-align: center">
+          <p-button
+            icon="pi pi-eye"
+            severity="secondary"
+            [text]="true"
+            [rounded]="true"
+            pTooltip="檢視"
+            (onClick)="view(course)"
+          />
+          <p-button
+            icon="pi pi-pencil"
+            severity="info"
+            [text]="true"
+            [rounded]="true"
+            pTooltip="編輯"
+            (onClick)="edit(course)"
+          />
+          <p-button
+            icon="pi pi-trash"
+            severity="danger"
+            [text]="true"
+            [rounded]="true"
+            pTooltip="刪除"
+            (onClick)="remove(course, $event)"
+          />
+        </td>
+      </tr>
+    </ng-template>
+
+    <ng-template pTemplate="emptymessage">
+      <tr>
+        <td colspan="15" style="text-align: center" class="text-muted">查無資料</td>
+      </tr>
+    </ng-template>
+  </p-table>
+</div>
+
+<p-drawer [(visible)]="drawerVisible" header="搜尋條件" position="right" styleClass="filter-drawer">
+  <div class="field">
+    <label for="kw">關鍵字</label>
+    <input
+      id="kw"
+      type="text"
+      pInputText
+      class="full-width"
+      placeholder="課程名稱 / 官方名稱 / 簡介代碼 / 科目代碼 / 友善網址"
+      [(ngModel)]="filters.keyword"
+    />
+  </div>
+
+  <div class="field">
+    <label for="partner">原廠</label>
+    <p-select
+      inputId="partner"
+      styleClass="full-width"
+      [options]="partnerOptions()"
+      optionLabel="label"
+      optionValue="value"
+      [filter]="true"
+      [showClear]="true"
+      placeholder="全部"
+      appendTo="body"
+      [(ngModel)]="filters.partnerPkid"
+    />
+  </div>
+
+  <div class="field">
+    <label for="courseGroup">課程群組</label>
+    <p-select
+      inputId="courseGroup"
+      styleClass="full-width"
+      [options]="courseGroupOptions()"
+      optionLabel="label"
+      optionValue="value"
+      [filter]="true"
+      [showClear]="true"
+      placeholder="全部"
+      appendTo="body"
+      [(ngModel)]="filters.courseGroupPkid"
+    />
+  </div>
+
+  <div class="field">
+    <label for="publishStatus">上架狀態</label>
+    <p-select
+      inputId="publishStatus"
+      styleClass="full-width"
+      [options]="publishStatusOptions()"
+      optionLabel="label"
+      optionValue="value"
+      [showClear]="true"
+      placeholder="全部"
+      appendTo="body"
+      [(ngModel)]="filters.publishStatusPkid"
+    />
+  </div>
+
+  <div class="field">
+    <label>上架日期（起～迄）</label>
+    <div class="range-row">
+      <p-datepicker
+        styleClass="full-width"
+        dateFormat="yy/mm/dd"
+        appendTo="body"
+        placeholder="起"
+        [(ngModel)]="scheduleOnFrom"
+      />
+      <p-datepicker
+        styleClass="full-width"
+        dateFormat="yy/mm/dd"
+        appendTo="body"
+        placeholder="迄"
+        [(ngModel)]="scheduleOnTo"
+      />
+    </div>
+  </div>
+
+  <div class="field">
+    <label>下架日期（起～迄）</label>
+    <div class="range-row">
+      <p-datepicker
+        styleClass="full-width"
+        dateFormat="yy/mm/dd"
+        appendTo="body"
+        placeholder="起"
+        [(ngModel)]="scheduleOffFrom"
+      />
+      <p-datepicker
+        styleClass="full-width"
+        dateFormat="yy/mm/dd"
+        appendTo="body"
+        placeholder="迄"
+        [(ngModel)]="scheduleOffTo"
+      />
+    </div>
+  </div>
+
+  <div class="field">
+    <label for="canRepeat">允許重聽</label>
+    <p-select
+      inputId="canRepeat"
+      styleClass="full-width"
+      [options]="triStateOptions"
+      optionLabel="label"
+      optionValue="value"
+      appendTo="body"
+      [(ngModel)]="filters.canRepeat"
+    />
+  </div>
+
+  <div class="drawer-actions">
+    <p-button label="清除" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="clearFilters()" />
+    <p-button label="套用" icon="pi pi-check" (onClick)="applyFilters()" />
+  </div>
+</p-drawer>
