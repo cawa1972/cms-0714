@@ -36,10 +36,26 @@ public sealed class CourseFlyerDocument : IDocument
     private readonly Course _course;
     private readonly DateOnly _generatedOn;
 
+    // The printed 文件產生日期 is business-local (Taiwan), not server-local: on a UTC host,
+    // DateTime.Now would print yesterday's date between 00:00–08:00 Taipei time.
+    private static readonly TimeZoneInfo TaiwanTimeZone = ResolveTaiwanTimeZone();
+
     public CourseFlyerDocument(Course course, DateOnly? generatedOn = null)
     {
         _course = course;
-        _generatedOn = generatedOn ?? DateOnly.FromDateTime(DateTime.Now);
+        _generatedOn = generatedOn
+            ?? DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(DateTime.UtcNow, TaiwanTimeZone));
+    }
+
+    private static TimeZoneInfo ResolveTaiwanTimeZone()
+    {
+        // IANA id works cross-platform on .NET 6+ (ICU); Windows id as fallback; local as last resort.
+        try { return TimeZoneInfo.FindSystemTimeZoneById("Asia/Taipei"); }
+        catch (TimeZoneNotFoundException)
+        {
+            try { return TimeZoneInfo.FindSystemTimeZoneById("Taipei Standard Time"); }
+            catch (TimeZoneNotFoundException) { return TimeZoneInfo.Local; }
+        }
     }
 
     public DocumentMetadata GetMetadata()

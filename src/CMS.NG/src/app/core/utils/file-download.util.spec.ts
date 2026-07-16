@@ -1,4 +1,5 @@
 import {
+  buildFlyerFilename,
   filenameFromContentDisposition,
   sanitizeFilename,
   saveBlob,
@@ -40,7 +41,27 @@ describe('sanitizeFilename', () => {
   });
 });
 
+describe('buildFlyerFilename', () => {
+  it('builds the 課程簡介 name from a sanitized title', () => {
+    expect(buildFlyerFilename('CI/CD 實戰', 7)).toBe('課程簡介-CI-CD 實戰.pdf');
+  });
+
+  it('falls back to course-{pkid}.pdf when the title sanitizes to empty', () => {
+    expect(buildFlyerFilename('   ', 7)).toBe('course-7.pdf');
+    expect(buildFlyerFilename(null, 7)).toBe('course-7.pdf');
+  });
+});
+
 describe('filenameFromContentDisposition', () => {
+  it('rejects names containing path separators (defense-in-depth)', () => {
+    expect(
+      filenameFromContentDisposition('attachment; filename="../../evil.pdf"'),
+    ).toBeNull();
+    expect(
+      filenameFromContentDisposition("attachment; filename*=UTF-8''..%2F..%2Fevil.pdf"),
+    ).toBeNull();
+  });
+
   it('returns null for a missing header', () => {
     expect(filenameFromContentDisposition(null)).toBeNull();
   });
@@ -67,7 +88,10 @@ describe('filenameFromContentDisposition', () => {
 });
 
 describe('saveBlob', () => {
-  it('creates an object URL, clicks a download anchor, then revokes the URL', () => {
+  beforeEach(() => jasmine.clock().install());
+  afterEach(() => jasmine.clock().uninstall());
+
+  it('creates an object URL, clicks a download anchor, then revokes the URL deferred', () => {
     const createSpy = spyOn(URL, 'createObjectURL').and.returnValue('blob:fake-url');
     const revokeSpy = spyOn(URL, 'revokeObjectURL');
     const clickSpy = spyOn(HTMLAnchorElement.prototype, 'click');
@@ -76,6 +100,9 @@ describe('saveBlob', () => {
 
     expect(createSpy).toHaveBeenCalledTimes(1);
     expect(clickSpy).toHaveBeenCalledTimes(1);
+    // Revocation is deferred (Safari can cancel a download whose URL is revoked synchronously).
+    expect(revokeSpy).not.toHaveBeenCalled();
+    jasmine.clock().tick(1);
     expect(revokeSpy).toHaveBeenCalledWith('blob:fake-url');
   });
 });

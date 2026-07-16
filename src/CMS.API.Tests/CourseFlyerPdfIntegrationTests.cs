@@ -19,6 +19,7 @@ namespace CMS.API.Tests;
 /// in Program.cs cannot ship green), and QuestPDF rendering. Only the DB-backed services are
 /// swapped for in-memory fakes, mirroring <see cref="AuthorizationIntegrationTests"/>.
 /// </summary>
+[Collection(QuestPdfRenderingCollection.Name)]
 public class CourseFlyerPdfIntegrationTests
 {
     private const string SigningKey = "integration-signing-secret-key-at-least-32-bytes!!";
@@ -107,6 +108,24 @@ public class CourseFlyerPdfIntegrationTests
         // HttpClient decodes filename* — asserting the decoded value proves the RFC 5987
         // round-trip (server percent-encodes, client restores the Chinese name).
         Assert.Equal("課程簡介-ASP.NET Core 企業級 Web API 開發實戰.pdf", disposition.FileNameStar);
+    }
+
+    [Fact]
+    public async Task GetFlyer_CorsExposesContentDisposition()
+    {
+        // Guards Program.cs's WithExposedHeaders("Content-Disposition") — without it, browsers
+        // silently lose the server-named RFC 5987 filename and fall back to the local name.
+        using var factory = CreateFactory();
+        using var client = factory.CreateClient();
+        var token = await LoginAndGetTokenAsync(client);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        client.DefaultRequestHeaders.Add("Origin", "http://localhost:4200");
+
+        var response = await client.GetAsync(FlyerUrl);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.True(response.Headers.TryGetValues("Access-Control-Expose-Headers", out var exposed));
+        Assert.Contains("Content-Disposition", string.Join(",", exposed!));
     }
 
     [Fact]

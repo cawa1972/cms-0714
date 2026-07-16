@@ -169,6 +169,24 @@ describe('CourseDetail', () => {
     expect(anchor.name()).toBe('課程簡介-AWS 架構師.pdf');
   });
 
+  it('falls back to course-{pkid}.pdf when the title sanitizes to empty', () => {
+    const { component, serviceSpy } = setup(of({ ...COURSE, title: ' . ' }));
+    const anchor = spyOnAnchorDownload();
+    serviceSpy.downloadFlyer.and.returnValue(of(pdfResponse()));
+
+    component.downloadFlyer();
+
+    expect(anchor.name()).toBe('course-2.pdf');
+  });
+
+  it('does nothing when no course is loaded', () => {
+    const { component, serviceSpy } = setup(throwError(() => new Error('missing')));
+
+    component.downloadFlyer();
+
+    expect(serviceSpy.downloadFlyer).not.toHaveBeenCalled();
+  });
+
   it('shows a busy state while downloading and guards against a second click', () => {
     const { component, serviceSpy } = setup();
     const pending = new Subject<HttpResponse<Blob>>();

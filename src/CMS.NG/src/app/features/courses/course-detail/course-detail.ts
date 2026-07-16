@@ -9,8 +9,8 @@ import { MessageService } from 'primeng/api';
 import { Course } from '@core/models/course.model';
 import { CourseService } from '@core/services/course.service';
 import {
+  buildFlyerFilename,
   filenameFromContentDisposition,
-  sanitizeFilename,
   saveBlob,
 } from '@core/utils/file-download.util';
 import { QrCode } from '@core/components/qr-code/qr-code';
@@ -36,7 +36,7 @@ export class CourseDetail implements OnInit {
   // used for the flyer PDF's QR) — keep both in sync when the public site changes.
   protected readonly qrCodeUrl = computed(() => {
     const c = this.course();
-    return c ? `https://www.uuu.com.tw/Course/Show/${c.pkid}/${c.courseId}` : '';
+    return c ? `https://www.uuu.com.tw/Course/Show/${c.pkid}/${encodeURIComponent(c.courseId)}` : '';
   });
 
   ngOnInit(): void {
@@ -72,10 +72,9 @@ export class CourseDetail implements OnInit {
     this.service.downloadFlyer(current.pkid).subscribe({
       next: (response) => {
         // Server-named file (RFC 5987 filename*, CORS-exposed); locally-built fallback.
-        const sanitized = sanitizeFilename(current.title);
-        const fallback = sanitized ? `課程簡介-${sanitized}.pdf` : `course-${current.pkid}.pdf`;
         const filename =
-          filenameFromContentDisposition(response.headers.get('Content-Disposition')) ?? fallback;
+          filenameFromContentDisposition(response.headers.get('Content-Disposition')) ??
+          buildFlyerFilename(current.title, current.pkid);
         saveBlob(response.body!, filename);
         this.downloadingFlyer.set(false);
       },

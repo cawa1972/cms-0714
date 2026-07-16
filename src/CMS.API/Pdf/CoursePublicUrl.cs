@@ -10,6 +10,8 @@ namespace CMS.API.Pdf;
 /// </summary>
 public static class CoursePublicUrl
 {
+    // CourseId is varchar(50) under a Chinese collation — escape it so a space, '?', '#', or
+    // Big5 text can't malform the printed QR target.
     public static string For(Course course)
-        => $"https://www.uuu.com.tw/Course/Show/{course.Pkid}/{course.CourseId}";
+        => $"https://www.uuu.com.tw/Course/Show/{course.Pkid}/{Uri.EscapeDataString(course.CourseId)}";
 }

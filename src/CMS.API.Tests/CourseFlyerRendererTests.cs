@@ -12,6 +12,7 @@ namespace CMS.API.Tests;
 /// touches Skia and the Noto Sans TC font assets (which must be copied to the test output via
 /// the CMS.API project's font item). Controller tests use <see cref="Fakes.FakeCourseFlyerRenderer"/>.
 /// </summary>
+[Collection(QuestPdfRenderingCollection.Name)]
 public class CourseFlyerRendererTests
 {
     private static readonly DateOnly GeneratedOn = new(2026, 7, 16);

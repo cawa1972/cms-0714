@@ -1,5 +1,19 @@
 # TODOS
 
+## Auth interceptor: parse Blob error bodies on 5xx
+
+- **What:** The flyer download introduced the app's first `responseType: 'blob'` request. On a
+  5xx, Angular delivers `error.error` as a Blob, so the interceptor's `body?.message` probe
+  misses and users always see the generic fallback toast instead of the exception middleware's
+  message.
+- **Why:** Slightly better error messages for blob endpoints (flyer today, catalog export later).
+- **Pros:** One `error.error instanceof Blob` branch + async read; a spec pins the behavior.
+- **Cons:** Touches the shared auth interceptor; current behavior (generic toast) is degraded
+  but correct, so priority is low.
+- **Context:** Flagged by the /ship red-team review (2026-07-16) as an integration-boundary gap
+  in `src/CMS.NG/src/app/core/interceptors/auth.interceptor.ts:36`. Priority: P3.
+- **Depends on / blocked by:** Nothing.
+
 ## Multi-course catalog PDF export
 
 - **What:** Select multiple courses in the course list → download one paginated PDF catalog
@@ -10,11 +24,10 @@
   `file-download.util.ts` nearly unchanged; high demo value.
 - **Cons:** Multi-select UX on the list page; pagination/cover design; larger payloads
   (streaming may replace `byte[]`).
-- **Context:** Designed for in the flyer feature (see
-  `~/.gstack/projects/cawa1972-cms-0714/Admin-worktree-feature-course-pdf-design-20260716-114943.md`
-  and `spec/custom/CourseFlyer/`). The per-course page is the flyer document; the catalog is
-  either one multi-page `IDocument` over N courses or a document merge. Start at
-  `src/CMS.API/Pdf/`.
+- **Context:** Designed for in the flyer feature — wireframe and mockup in
+  `spec/custom/CourseFlyer/` (repo). Key decisions carried forward: one flyer-style page per
+  course reusing `CourseFlyerDocument`; catalog is either one multi-page `IDocument` over N
+  courses or a document merge. Start at `src/CMS.API/Pdf/`.
 - **Depends on / blocked by:** Course flyer PDF feature shipped.
 
 ## Promotion-aware flyer + anonymous share link

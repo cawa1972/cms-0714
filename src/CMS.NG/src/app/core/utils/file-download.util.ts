@@ -37,38 +37,55 @@ export function sanitizeFilename(name: string | null | undefined): string {
 }
 
 /**
+ * Client-side flyer filename — the fallback when the server's Content-Disposition is missing
+ * or unparsable. Mirrors CourseFlyerFileName.Utf8 on the API side (課程簡介-{Title}.pdf,
+ * empty-sanitized title → course-{pkid}.pdf) — keep the two in sync.
+ */
+export function buildFlyerFilename(title: string | null | undefined, pkid: number): string {
+  const component = sanitizeFilename(title);
+  return component ? `課程簡介-${component}.pdf` : `course-${pkid}.pdf`;
+}
+
+/**
  * Extracts the download filename from a Content-Disposition header: RFC 5987 `filename*`
  * (UTF-8, percent-encoded) preferred, plain `filename` second. Returns null when the header
- * is absent or unparsable — callers fall back to a locally-built name.
+ * is absent, unparsable, or contains path separators (defense-in-depth — this util is shared
+ * plumbing and must not trust any endpoint) — callers fall back to a locally-built name.
  */
 export function filenameFromContentDisposition(header: string | null): string | null {
   if (!header) {
     return null;
   }
 
+  const accept = (value: string | undefined): string | null => {
+    const name = value?.trim();
+    return name && !name.includes('/') && !name.includes('\\') ? name : null;
+  };
+
   const star = /filename\*=UTF-8''([^;]+)/i.exec(header);
   if (star) {
     try {
-      return decodeURIComponent(star[1].trim());
+      const decoded = accept(decodeURIComponent(star[1]));
+      if (decoded) {
+        return decoded;
+      }
     } catch {
       // Malformed percent-encoding — fall through to plain filename.
     }
   }
 
   const plain = /filename=(?:"([^"]*)"|([^;]+))/i.exec(header);
-  const value = (plain?.[1] ?? plain?.[2])?.trim();
-  return value || null;
+  return accept(plain?.[1] ?? plain?.[2]);
 }
 
 /** Triggers a browser download of the blob under the given filename. */
 export function saveBlob(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob);
-  try {
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = filename;
-    anchor.click();
-  } finally {
-    URL.revokeObjectURL(url);
-  }
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  // Deferred revoke: revoking synchronously after click() can cancel the still-starting
+  // download in Safari (and historically Firefox).
+  setTimeout(() => URL.revokeObjectURL(url), 0);
 }

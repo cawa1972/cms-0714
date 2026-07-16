@@ -113,7 +113,9 @@ public class CourseFlyerTextTests
     [InlineData("0.25", "0.25")]
     [InlineData("0", "0")]
     public void FormatCredit_TrimsTrailingZeros(string credit, string expected)
-        => Assert.Equal(expected, CourseFlyerText.FormatCredit(decimal.Parse(credit)));
+        // Invariant parse: a comma-decimal-culture runner (de-DE) would misparse "4.5" otherwise.
+        => Assert.Equal(expected,
+            CourseFlyerText.FormatCredit(decimal.Parse(credit, System.Globalization.CultureInfo.InvariantCulture)));
 
     // ---- Dates --------------------------------------------------------------
 
