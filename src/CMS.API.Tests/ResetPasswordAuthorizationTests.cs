@@ -140,14 +140,15 @@ public class ResetPasswordAuthorizationTests
     // ---- SysConfig default-password resolution (the hash the reset stores) ------
 
     [Fact]
-    public void ResolveDefaultPasswordHash_ReturnsSha256OfDefaultPasswordFromConfigJson()
+    public void ResolveDefaultPasswordHash_ReturnsHashOfDefaultPasswordFromConfigJson()
     {
         const string configValue = """{ "defaultPassword": "CMS4fun#", "symmetricSecurityKey": "irrelevant" }""";
 
         var hash = AppUserRepository.ResolveDefaultPasswordHash(configValue);
 
-        // Exactly SHA256(defaultPassword) — read from the JSON at runtime, not hard-coded.
-        Assert.Equal(PasswordHasher.Hash("CMS4fun#"), hash);
+        // A hash of defaultPassword — read from the JSON at runtime, not hard-coded. Compared with
+        // Verify, not Equal: the hash is salted, so it differs on every call.
+        Assert.True(PasswordHasher.Verify("CMS4fun#", hash));
     }
 
     [Theory]

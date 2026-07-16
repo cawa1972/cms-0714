@@ -88,6 +88,23 @@ CREATE TABLE [dbo].[RowAudit](
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
+/****** Object:  Index [IX_RowAudit_Table_Pk]    ******/
+-- Every read of this table is RowAuditRepository.GetHistoryAsync: filter on
+-- (TableName, PrimaryKeyValues), order by [DateTime] DESC, pkid DESC. The clustered PK on the
+-- IDENTITY pkid serves none of that, so without this index each audit-badge load scans the whole
+-- table -- and RowAudit is the fastest-growing table in the schema (one row per insert/update/delete
+-- across every feature, never pruned). Key order matches the query so it seeks; the INCLUDE covers
+-- the projected columns so it never leaves the index.
+CREATE NONCLUSTERED INDEX [IX_RowAudit_Table_Pk] ON [dbo].[RowAudit]
+(
+	[TableName] ASC,
+	[PrimaryKeyValues] ASC,
+	[DateTime] DESC,
+	[pkid] DESC
+)
+INCLUDE([UserName],[ActionType],[ActionDesc])
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
 /****** Object:  Table [dbo].[SysConfig]    Script Date: 3/16/2026 3:57:19 PM ******/
 SET ANSI_NULLS ON
 GO

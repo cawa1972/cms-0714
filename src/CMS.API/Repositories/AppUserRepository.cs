@@ -97,7 +97,7 @@ public sealed class AppUserRepository : IAppUserRepository
 
         var pkid = await db.ExecuteScalarAsync<int>("""
             INSERT INTO AppUser (UserId, UserName, IsActive, PasswordHash, PasswordUpdatedTime)
-            VALUES (@UserId, @UserName, @IsActive, @PasswordHash, GETDATE());
+            VALUES (@UserId, @UserName, @IsActive, @PasswordHash, GETUTCDATE());
             SELECT CAST(SCOPE_IDENTITY() AS int);
             """,
             new { request.UserId, request.UserName, request.IsActive, PasswordHash = passwordHash },
@@ -183,7 +183,7 @@ public sealed class AppUserRepository : IAppUserRepository
         var affected = await db.ExecuteAsync("""
             UPDATE AppUser
                SET PasswordHash = @PasswordHash,
-                   PasswordUpdatedTime = GETDATE()
+                   PasswordUpdatedTime = GETUTCDATE()
              WHERE UserId = @UserId;
             """, new { UserId = userId, PasswordHash = passwordHash }, tx);
 
@@ -256,8 +256,12 @@ public sealed class AppUserRepository : IAppUserRepository
 
     /// <summary>
     /// Pure part of the default-password resolution, split from the DB read so it is unit-testable:
-    /// parses the SysConfig 'appConfig' JSON, extracts <c>defaultPassword</c>, and returns
-    /// <c>SHA256(defaultPassword)</c> (lowercase hex). Throws on missing config or property.
+    /// parses the SysConfig 'appConfig' JSON, extracts <c>defaultPassword</c>, and returns a salted
+    /// <see cref="PasswordHasher"/> hash of it. Throws on missing config or property.
+    /// <para>
+    /// The returned hash is <b>not</b> stable across calls (the salt is random), so assert on it with
+    /// <see cref="PasswordHasher.Verify"/> rather than string equality.
+    /// </para>
     /// </summary>
     public static string ResolveDefaultPasswordHash(string? configValue)
     {

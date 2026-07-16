@@ -71,10 +71,10 @@ public class AuthChangePasswordControllerTests
 
         Assert.Contains("目前密碼錯誤", BadRequestMessage(result));
 
-        // No write happened; the stored hash is untouched.
+        // No write happened; the stored hash still verifies against the original password.
         Assert.Null(repo.PasswordUpdatedUserId);
         var stored = await repo.GetCredentialAsync("helen");
-        Assert.Equal(PasswordHasher.Hash(CurrentPassword), stored!.PasswordHash);
+        Assert.True(PasswordHasher.Verify(CurrentPassword, stored!.PasswordHash));
     }
 
     // ---- Complexity policy ----------------------------------------------------
@@ -111,7 +111,7 @@ public class AuthChangePasswordControllerTests
         var result = await controller.ChangePassword(Request(newPw: strong));
 
         Assert.IsType<NoContentResult>(result);
-        Assert.Equal(PasswordHasher.Hash(strong), repo.UpdatedPasswordHash);
+        Assert.True(PasswordHasher.Verify(strong, repo.UpdatedPasswordHash));
     }
 
     // ---- New / confirm mismatch ------------------------------------------------
@@ -132,7 +132,7 @@ public class AuthChangePasswordControllerTests
     // ---- Valid change ----------------------------------------------------------
 
     [Fact]
-    public async Task ChangePassword_Valid_StoresSha256OfNew_AndStampsPasswordUpdatedTime()
+    public async Task ChangePassword_Valid_StoresHashOfNew_AndStampsPasswordUpdatedTime()
     {
         var repo = new FakeAuthRepository(Helen());
         var controller = Controller(repo, "helen");
@@ -143,13 +143,13 @@ public class AuthChangePasswordControllerTests
 
         Assert.IsType<NoContentResult>(result);
 
-        // The JWT user's row was targeted, with exactly SHA256(new password).
+        // The JWT user's row was targeted, with a hash of the new password.
         Assert.Equal("helen", repo.PasswordUpdatedUserId);
-        Assert.Equal(PasswordHasher.Hash(ValidNewPassword), repo.UpdatedPasswordHash);
+        Assert.True(PasswordHasher.Verify(ValidNewPassword, repo.UpdatedPasswordHash));
 
         // The stored credential now carries the new hash, and the timestamp was stamped.
         var stored = await repo.GetCredentialAsync("helen");
-        Assert.Equal(PasswordHasher.Hash(ValidNewPassword), stored!.PasswordHash);
+        Assert.True(PasswordHasher.Verify(ValidNewPassword, stored!.PasswordHash));
         Assert.NotNull(repo.PasswordUpdatedTime);
         Assert.InRange(repo.PasswordUpdatedTime.Value, before, after);
     }

@@ -48,9 +48,21 @@ public sealed class AuthRepository : IAuthRepository
         var affected = await db.ExecuteAsync("""
             UPDATE AppUser
                SET PasswordHash = @passwordHash,
-                   PasswordUpdatedTime = GETDATE()
+                   PasswordUpdatedTime = GETUTCDATE()
              WHERE UserId = @userId
             """, new { userId, passwordHash });
+
+        return affected > 0;
+    }
+
+    public async Task<bool> UpgradePasswordHashAsync(string userId, string passwordHash)
+    {
+        using var db = _factory.Create();
+
+        // PasswordUpdatedTime is intentionally absent from the SET list — see IAuthRepository.
+        var affected = await db.ExecuteAsync(
+            "UPDATE AppUser SET PasswordHash = @passwordHash WHERE UserId = @userId",
+            new { userId, passwordHash });
 
         return affected > 0;
     }

@@ -152,4 +152,84 @@ public class AuthControllerTests
         Assert.DoesNotContain(user.PasswordHash, body.UserId);
         Assert.DoesNotContain(user.PasswordHash, body.UserName);
     }
+
+    // ---- Legacy hash upgrade on login ----------------------------------
+
+    /// <summary>A user whose stored hash is still the old unsalted SHA-256 hex.</summary>
+    private static AppUserCredential LegacyHashUser() => new()
+    {
+        UserId = "helen",
+        UserName = "Helen Chen",
+        IsActive = true,
+        PasswordHash = Convert.ToHexStringLower(
+            System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(Password))),
+        RoleIds = ["Admin"],
+    };
+
+    [Fact]
+    public async Task Login_LegacySha256Hash_CorrectPassword_Succeeds()
+    {
+        // A user whose row predates the PBKDF2 migration must still be able to sign in.
+        var repo = new FakeAuthRepository(LegacyHashUser());
+        var controller = new AuthController(repo, new JwtTokenService(), new FakeSigningKeyProvider(SigningKey));
+
+        var result = await controller.Login(new LoginRequest { UserId = "helen", Password = Password });
+
+        Assert.Equal("helen", OkBody(result).UserId);
+    }
+
+    [Fact]
+    public async Task Login_LegacySha256Hash_WrongPassword_StillUnauthorized_AndDoesNotUpgrade()
+    {
+        var repo = new FakeAuthRepository(LegacyHashUser());
+        var controller = new AuthController(repo, new JwtTokenService(), new FakeSigningKeyProvider(SigningKey));
+
+        var result = await controller.Login(new LoginRequest { UserId = "helen", Password = "wrong" });
+
+        AssertUnauthorized(result);
+        // A failed login must never rewrite the stored hash.
+        Assert.Equal(0, repo.UpgradeCount);
+    }
+
+    [Fact]
+    public async Task Login_LegacySha256Hash_UpgradesStoredHashToPbkdf2()
+    {
+        var repo = new FakeAuthRepository(LegacyHashUser());
+        var controller = new AuthController(repo, new JwtTokenService(), new FakeSigningKeyProvider(SigningKey));
+
+        await controller.Login(new LoginRequest { UserId = "helen", Password = Password });
+
+        Assert.Equal(1, repo.UpgradeCount);
+
+        // The row now holds a salted hash that still verifies, and is no longer flagged for upgrade.
+        var stored = await repo.GetCredentialAsync("helen");
+        Assert.True(PasswordHasher.Verify(Password, stored!.PasswordHash));
+        Assert.False(PasswordHasher.NeedsRehash(stored.PasswordHash));
+    }
+
+    [Fact]
+    public async Task Login_LegacyHashUpgrade_DoesNotStampPasswordUpdatedTime()
+    {
+        // The re-hash is transparent: the secret did not change, so the column that reports when the
+        // user last changed their password must not move.
+        var repo = new FakeAuthRepository(LegacyHashUser());
+        var controller = new AuthController(repo, new JwtTokenService(), new FakeSigningKeyProvider(SigningKey));
+
+        await controller.Login(new LoginRequest { UserId = "helen", Password = Password });
+
+        Assert.Null(repo.PasswordUpdatedTime);
+        Assert.Null(repo.PasswordUpdatedUserId);
+    }
+
+    [Fact]
+    public async Task Login_AlreadyCurrentHash_DoesNotUpgrade()
+    {
+        // No pointless write (and no PBKDF2 re-derivation) on the overwhelmingly common path.
+        var repo = new FakeAuthRepository(ActiveUser());
+        var controller = new AuthController(repo, new JwtTokenService(), new FakeSigningKeyProvider(SigningKey));
+
+        await controller.Login(new LoginRequest { UserId = "helen", Password = Password });
+
+        Assert.Equal(0, repo.UpgradeCount);
+    }
 }

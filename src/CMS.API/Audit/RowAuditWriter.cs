@@ -79,7 +79,10 @@ public sealed class RowAuditWriter : IRowAuditWriter
             ActionDesc = actionDesc.Length <= MaxActionDescLength
                 ? actionDesc
                 : actionDesc[..MaxActionDescLength],
-            DateTime = DateTime.Now,
+            // UTC, not local: the column is a bare `datetime` carrying no offset, and the frontend
+            // reads it back as UTC (row-audit-badge appends 'Z' before the DatePipe). Writing local
+            // time here would shift every displayed audit stamp by the server's UTC offset.
+            DateTime = DateTime.UtcNow,
         };
 
     /// <summary>

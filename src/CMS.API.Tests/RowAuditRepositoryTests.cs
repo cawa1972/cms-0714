@@ -94,4 +94,47 @@ public sealed class RowAuditRepositoryTests : IDisposable
 
         Assert.Empty(rows);
     }
+
+    // ---- Row cap ---------------------------------------------------------
+
+    [Fact]
+    public async Task GetHistory_MoreRowsThanLimit_ReturnsOnlyTheNewest()
+    {
+        // RowAudit is never pruned, so the query must bound itself rather than hand back a record's
+        // entire trail to render one badge.
+        for (var day = 1; day <= 10; day++)
+            await SeedAsync("Course", "123", "Update", $"user{day:00}", new DateTime(2026, 6, day, 10, 0, 0));
+
+        var rows = (await _repo.GetHistoryAsync("Course", "123", limit: 3)).ToList();
+
+        Assert.Equal(3, rows.Count);
+        Assert.Equal(new[] { "user10", "user09", "user08" }, rows.Select(r => r.UserName));
+    }
+
+    [Fact]
+    public async Task GetHistory_FewerRowsThanLimit_ReturnsAllOfThem()
+    {
+        await SeedAsync("Course", "123", "Insert", "alice", new DateTime(2026, 6, 1, 10, 0, 0));
+        await SeedAsync("Course", "123", "Update", "bob", new DateTime(2026, 6, 2, 10, 0, 0));
+
+        var rows = (await _repo.GetHistoryAsync("Course", "123", limit: 50)).ToList();
+
+        Assert.Equal(new[] { "bob", "alice" }, rows.Select(r => r.UserName));
+    }
+
+    [Fact]
+    public async Task GetHistory_LimitApplies_AfterFilteringNotBefore()
+    {
+        // Guards the subquery shape: the WHERE must run inside the ROW_NUMBER window, or the cap
+        // would be spent on rows belonging to other records and starve the one asked for.
+        for (var day = 1; day <= 5; day++)
+            await SeedAsync("Partner", "999", "Update", $"other{day}", new DateTime(2026, 6, day, 12, 0, 0));
+
+        await SeedAsync("Course", "123", "Insert", "alice", new DateTime(2026, 6, 1, 10, 0, 0));
+
+        var rows = (await _repo.GetHistoryAsync("Course", "123", limit: 3)).ToList();
+
+        var row = Assert.Single(rows);
+        Assert.Equal("alice", row.UserName);
+    }
 }
