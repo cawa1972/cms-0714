@@ -37,3 +37,22 @@ global.json         pins the .NET 9 SDK (9.0.314)
 - **Signing key** = SysConfig `configKey='appConfig'` → `symmetricSecurityKey`, read via `ISigningKeyProvider` (the same key issues and validates). **Never hard-code it.** Frontend session lives in **session** storage (`cms.auth`), never local storage.
 - **Version pins — do not casually bump:** **.NET 9**, not 10 (`global.json` forces 9.0.314; the 10 SDK is also installed) · **PrimeNG v20**, not v21 (v21 needs Angular 21; this app is Angular 20).
 - **gstack:** use the `/browse` skill for **all** web browsing — never the `mcp__claude-in-chrome__*` tools.
+
+## Skill routing
+
+When the user's request matches an available skill, invoke it via the Skill tool. When in doubt, invoke the skill.
+
+Key routing rules:
+- Product ideas/brainstorming → invoke /office-hours
+- Strategy/scope → invoke /plan-ceo-review
+- Architecture → invoke /plan-eng-review
+- Design system/plan review → invoke /design-consultation or /plan-design-review
+- Full review pipeline → invoke /autoplan
+- Bugs/errors → invoke /investigate
+- QA/testing site behavior → invoke /qa or /qa-only
+- Code review/diff check → invoke /review
+- Visual polish → invoke /design-review
+- Ship/deploy/PR → invoke /ship or /land-and-deploy
+- Save progress → invoke /context-save
+- Resume context → invoke /context-restore
+- Author a backlog-ready spec/issue → invoke /spec

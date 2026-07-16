@@ -1,6 +1,8 @@
 using CMS.API.Models;
+using CMS.API.Pdf;
 using CMS.API.Repositories;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Net.Http.Headers;
 
 namespace CMS.API.Controllers;
 
@@ -9,8 +11,13 @@ namespace CMS.API.Controllers;
 public class CoursesController : ControllerBase
 {
     private readonly ICourseRepository _repository;
+    private readonly ICourseFlyerRenderer _flyerRenderer;
 
-    public CoursesController(ICourseRepository repository) => _repository = repository;
+    public CoursesController(ICourseRepository repository, ICourseFlyerRenderer flyerRenderer)
+    {
+        _repository = repository;
+        _flyerRenderer = flyerRenderer;
+    }
 
     /// <summary>List all courses.</summary>
     [HttpGet]
@@ -62,5 +69,29 @@ public class CoursesController : ControllerBase
     {
         var deleted = await _repository.DeleteAsync(id);
         return deleted ? NoContent() : NotFound();
+    }
+
+    /// <summary>Download the course flyer as a one-page A4 PDF. Read-only — no RowAudit.</summary>
+    [HttpGet("{id:int}/pdf")]
+    public async Task<IActionResult> GetFlyer(int id)
+    {
+        var course = await _repository.GetByIdAsync(id);
+        if (course is null)
+            return NotFound();
+
+        var bytes = _flyerRenderer.Render(course);
+
+        // Both Content-Disposition parameters, explicitly: ASCII `filename` for legacy agents,
+        // RFC 5987 UTF-8 `filename*` (the Chinese name browsers actually show). The FileNameStar
+        // setter performs the RFC 5987 percent-encoding. CORS exposes this header so the Angular
+        // blob download can read the name (fallback: frontend builds it locally).
+        var contentDisposition = new ContentDispositionHeaderValue("attachment")
+        {
+            FileName = CourseFlyerFileName.Ascii(course),
+            FileNameStar = CourseFlyerFileName.Utf8(course),
+        };
+        Response.Headers[HeaderNames.ContentDisposition] = contentDisposition.ToString();
+
+        return File(bytes, "application/pdf");
     }
 }

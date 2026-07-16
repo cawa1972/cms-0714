@@ -56,4 +56,4 @@ cd src/CMS.NG && npm test        # Karma + Jasmine (ng test)
 # Production build: ng build
 ```
 
-Current status (2026-07-15): backend **145/145** xUnit tests pass; frontend **231/231** Karma tests pass.
+Current status (2026-07-16): backend **255/255** xUnit tests pass; frontend **269/269** Karma tests pass.

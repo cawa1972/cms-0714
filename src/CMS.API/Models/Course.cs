@@ -38,4 +38,9 @@ public class Course
     public string? PartnerName { get; set; }
     public string? CourseGroupDescription { get; set; }
     public string? PublishStatusDescription { get; set; }
+
+    /// <summary>Resolved from PublishStatus.IsPublished (JOIN). Drives the flyer's draft
+    /// watermark — defaults to false, so an unseeded value renders the conservative
+    /// 「草稿・未發佈」 overlay rather than silently looking final.</summary>
+    public bool PublishStatusIsPublished { get; set; }
 }

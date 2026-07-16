@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>Course Flyer Wireframe — A4</title>
+<style>
+  /* Intentionally rough wireframe: system fonts, gray lines, no color. */
+  body { margin: 0; background: #e8e8e8; font-family: system-ui, "Microsoft JhengHei", sans-serif; color: #333; }
+  .page {
+    /* A4 at 96dpi ≈ 794 × 1123 */
+    width: 794px; height: 1123px; margin: 24px auto; background: #fff;
+    border: 1px solid #aaa; box-sizing: border-box; padding: 48px 56px;
+    display: flex; flex-direction: column;
+  }
+  .note { font-size: 10px; color: #999; letter-spacing: .5px; text-transform: uppercase; margin-bottom: 4px; }
+  .box { border: 1px dashed #bbb; padding: 12px 16px; }
+
+  /* Header brand band */
+  .brand { display: flex; justify-content: space-between; align-items: center;
+           border-bottom: 3px solid #555; padding-bottom: 14px; }
+  .brand .partner { font-size: 20px; font-weight: 700; }
+  .brand .tag { font-size: 12px; color: #777; }
+
+  /* Title block */
+  .titleblock { margin-top: 36px; }
+  .titleblock h1 { font-size: 34px; margin: 0 0 6px; line-height: 1.3; }
+  .titleblock .official { font-size: 16px; color: #666; margin: 0; }
+  .titleblock .courseid { display: inline-block; margin-top: 10px; font-size: 12px;
+    border: 1px solid #999; padding: 2px 10px; border-radius: 3px; color: #555; }
+
+  /* Info grid */
+  .grid { margin-top: 32px; display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 1px;
+          background: #ccc; border: 1px solid #ccc; }
+  .cell { background: #fff; padding: 14px 16px; }
+  .cell .label { font-size: 12px; color: #888; }
+  .cell .value { font-size: 18px; font-weight: 600; margin-top: 4px; }
+
+  /* Objective */
+  .objective { margin-top: 32px; flex: 1; }
+  .objective h2 { font-size: 15px; border-left: 4px solid #555; padding-left: 10px; margin: 0 0 12px; }
+  .objective p { font-size: 14px; line-height: 1.9; margin: 0; color: #444; }
+  .trunc { color: #999; font-size: 12px; margin-top: 8px; }
+
+  /* Footer */
+  .footer { display: flex; justify-content: space-between; align-items: flex-end;
+            border-top: 1px solid #ccc; padding-top: 18px; }
+  .footer .meta { font-size: 12px; color: #777; line-height: 1.8; }
+  .qr { width: 110px; height: 110px; border: 1px solid #999; display: flex; align-items: center;
+        justify-content: center; font-size: 11px; color: #999; text-align: center;
+        background: repeating-linear-gradient(45deg,#f4f4f4,#f4f4f4 6px,#fff 6px,#fff 12px); }
+  .qr-wrap { text-align: center; }
+  .qr-wrap .cap { font-size: 11px; color: #888; margin-top: 6px; }
+</style>
+</head>
+<body>
+<div class="page">
+  <!-- Brand band: PartnerName is the brand mark (premise fix — no logo asset in DB) -->
+  <div class="brand">
+    <div>
+      <div class="note">brand band — PartnerName</div>
+      <div class="partner">恆逸教育訓練中心</div>
+    </div>
+    <div class="tag">課程簡介 Course Flyer</div>
+  </div>
+
+  <!-- Title block: Title (zh) + OfficialTitle (en) + CourseId chip -->
+  <div class="titleblock">
+    <div class="note">Title / OfficialTitle / CourseId</div>
+    <h1>ASP.NET Core 企業級 Web API 開發實戰</h1>
+    <p class="official">Building Enterprise Web APIs with ASP.NET Core</p>
+    <span class="courseid">課程代碼 NET301</span>
+  </div>
+
+  <!-- Info grid: ScheduleOn–Off / Hour / ListPrice / LearningCredit -->
+  <div class="grid">
+    <div class="cell"><div class="label">報名期間</div><div class="value">2026/08/01 – 2026/09/30</div></div>
+    <div class="cell"><div class="label">總時數</div><div class="value">36 小時</div></div>
+    <div class="cell"><div class="label">定價</div><div class="value">NT$ 45,000</div></div>
+    <div class="cell"><div class="label">學習點數</div><div class="value">36 點</div></div>
+  </div>
+
+  <!-- Objective: truncated to fit — the anti-overflow rule made visible -->
+  <div class="objective">
+    <h2>課程目標 — Objective（截斷至 ~280 字）</h2>
+    <p>本課程帶領學員從零開始建置符合企業標準的 Web API：涵蓋 RESTful 設計原則、Dapper 資料存取、
+    JWT 驗證與授權、全域例外處理與稽核記錄。課程以實作為主，學員將完成一個可部署的完整專案，
+    並學習單元測試與整合測試的最佳實務……</p>
+    <div class="trunc">▸ 超出長度以「……」截斷；完整內容請掃描 QR Code 查看官網</div>
+  </div>
+
+  <!-- Footer: category + generated date | QR bottom-right -->
+  <div class="footer">
+    <div class="meta">
+      <div>課程分類：微軟開發系列（CourseGroupDescription）</div>
+      <div>文件產生日期：2026/07/16 ・ 資料以官網為準</div>
+    </div>
+    <div class="qr-wrap">
+      <div class="qr">QR<br>uuu.com.tw/Course/<br>Show/{pkid}/{courseId}</div>
+      <div class="cap">掃描查看課程詳情</div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
