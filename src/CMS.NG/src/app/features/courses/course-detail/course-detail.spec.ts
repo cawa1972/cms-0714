@@ -1,10 +1,10 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
-import { provideHttpClient } from '@angular/common/http';
+import { HttpErrorResponse, HttpHeaders, HttpResponse, provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { MessageService } from 'primeng/api';
-import { of, throwError } from 'rxjs';
+import { Subject, of, throwError } from 'rxjs';
 
 import { CourseDetail } from './course-detail';
 import { CourseService } from '@core/services/course.service';
@@ -38,10 +38,14 @@ const COURSE: Course = {
   partnerName: '甲骨文',
   courseGroupDescription: null,
   publishStatusDescription: '已發布',
+  publishStatusIsPublished: true,
 };
 
 function setup(getByIdReturn = of(COURSE)) {
-  const serviceSpy = jasmine.createSpyObj<CourseService>('CourseService', ['getById']);
+  const serviceSpy = jasmine.createSpyObj<CourseService>('CourseService', [
+    'getById',
+    'downloadFlyer',
+  ]);
   serviceSpy.getById.and.returnValue(getByIdReturn);
   const routerSpy = jasmine.createSpyObj<Router>('Router', ['navigate']);
 
@@ -113,5 +117,97 @@ describe('CourseDetail', () => {
 
     const img: HTMLImageElement = fixture.nativeElement.querySelector('.qr-code-image');
     expect(img.src).toMatch(/^data:image\/png;base64,/);
+  });
+
+  // ---- Flyer download ----------------------------------------------------
+
+  function pdfResponse(contentDisposition?: string): HttpResponse<Blob> {
+    return new HttpResponse({
+      body: new Blob(['%PDF-fake'], { type: 'application/pdf' }),
+      headers: contentDisposition
+        ? new HttpHeaders({ 'Content-Disposition': contentDisposition })
+        : new HttpHeaders(),
+    });
+  }
+
+  /** Captures the anchor download name saveBlob assigns (real DOM chain, no module spies). */
+  function spyOnAnchorDownload(): { name: () => string | undefined } {
+    spyOn(URL, 'createObjectURL').and.returnValue('blob:fake-url');
+    spyOn(URL, 'revokeObjectURL');
+    let captured: string | undefined;
+    spyOn(HTMLAnchorElement.prototype, 'click').and.callFake(function (this: HTMLAnchorElement) {
+      captured = this.download;
+    });
+    return { name: () => captured };
+  }
+
+  it('downloads the flyer under the server-provided RFC 5987 filename', () => {
+    const { component, serviceSpy } = setup();
+    const anchor = spyOnAnchorDownload();
+    serviceSpy.downloadFlyer.and.returnValue(
+      of(
+        pdfResponse(
+          "attachment; filename=course-AWS-SAA.pdf; filename*=UTF-8''%E8%AA%B2%E7%A8%8B%E7%B0%A1%E4%BB%8B-AWS.pdf",
+        ),
+      ),
+    );
+
+    component.downloadFlyer();
+
+    expect(serviceSpy.downloadFlyer).toHaveBeenCalledWith(2);
+    expect(anchor.name()).toBe('課程簡介-AWS.pdf');
+    expect(component['downloadingFlyer']()).toBeFalse();
+  });
+
+  it('falls back to the locally-built filename when the header is absent', () => {
+    const { component, serviceSpy } = setup();
+    const anchor = spyOnAnchorDownload();
+    serviceSpy.downloadFlyer.and.returnValue(of(pdfResponse()));
+
+    component.downloadFlyer();
+
+    expect(anchor.name()).toBe('課程簡介-AWS 架構師.pdf');
+  });
+
+  it('shows a busy state while downloading and guards against a second click', () => {
+    const { component, serviceSpy } = setup();
+    const pending = new Subject<HttpResponse<Blob>>();
+    serviceSpy.downloadFlyer.and.returnValue(pending.asObservable());
+
+    component.downloadFlyer();
+    expect(component['downloadingFlyer']()).toBeTrue();
+
+    component.downloadFlyer(); // second click while busy
+    expect(serviceSpy.downloadFlyer).toHaveBeenCalledTimes(1);
+  });
+
+  it('toasts on 404', () => {
+    const { component, serviceSpy } = setup();
+    const messages = TestBed.inject(MessageService);
+    const addSpy = spyOn(messages, 'add');
+    serviceSpy.downloadFlyer.and.returnValue(
+      throwError(() => new HttpErrorResponse({ status: 404 })),
+    );
+
+    component.downloadFlyer();
+
+    expect(addSpy).toHaveBeenCalledWith(
+      jasmine.objectContaining({ severity: 'error', detail: '找不到課程資料。' }),
+    );
+    expect(component['downloadingFlyer']()).toBeFalse();
+  });
+
+  it('stays silent on 5xx (the auth interceptor owns that toast)', () => {
+    const { component, serviceSpy } = setup();
+    const messages = TestBed.inject(MessageService);
+    const addSpy = spyOn(messages, 'add');
+    serviceSpy.downloadFlyer.and.returnValue(
+      throwError(() => new HttpErrorResponse({ status: 500 })),
+    );
+
+    component.downloadFlyer();
+
+    expect(addSpy).not.toHaveBeenCalled();
+    expect(component['downloadingFlyer']()).toBeFalse();
   });
 });

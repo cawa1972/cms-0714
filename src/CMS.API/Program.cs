@@ -2,6 +2,7 @@ using System.Text;
 using CMS.API.Audit;
 using CMS.API.Data;
 using CMS.API.Middleware;
+using CMS.API.Pdf;
 using CMS.API.Repositories;
 using CMS.API.Security;
 using Dapper;
@@ -38,7 +39,9 @@ builder.Services.AddCors(options =>
     options.AddPolicy(CorsPolicy, policy =>
         policy.SetIsOriginAllowed(origin => new Uri(origin).IsLoopback)
               .AllowAnyHeader()
-              .AllowAnyMethod());
+              .AllowAnyMethod()
+              // Lets the flyer download read the server-named filename (RFC 5987 filename*).
+              .WithExposedHeaders("Content-Disposition"));
 });
 
 // Data access
@@ -52,6 +55,10 @@ builder.Services.AddScoped<ICourseRepository, CourseRepository>();
 builder.Services.AddScoped<IFeaturedPromoItemRepository, FeaturedPromoItemRepository>();
 builder.Services.AddScoped<ILookupRepository, LookupRepository>();
 builder.Services.AddScoped<IAuthRepository, AuthRepository>();
+
+// Course flyer PDF. The renderer is stateless (QuestPDF bootstrap is lazy inside the class —
+// deliberately NOT here; see CourseFlyerRenderer).
+builder.Services.AddSingleton<ICourseFlyerRenderer, CourseFlyerRenderer>();
 
 // Cross-cutting row audit: repositories log one RowAudit row per Insert/Update/Delete. The writer
 // reads the acting user's UserName claim from the current request, hence IHttpContextAccessor.

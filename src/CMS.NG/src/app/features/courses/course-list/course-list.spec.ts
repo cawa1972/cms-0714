@@ -38,6 +38,7 @@ function course(pkid: number, courseId: string, title: string): Course {
     partnerName: '台灣微軟',
     courseGroupDescription: null,
     publishStatusDescription: '已發布',
+    publishStatusIsPublished: true,
   };
 }
 

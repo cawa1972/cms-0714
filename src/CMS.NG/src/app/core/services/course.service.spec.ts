@@ -34,6 +34,7 @@ const SAMPLE: Course = {
   partnerName: '甲骨文',
   courseGroupDescription: null,
   publishStatusDescription: '已發布',
+  publishStatusIsPublished: true,
 };
 
 function newRequest(): CourseRequest {
@@ -129,5 +130,18 @@ describe('CourseService', () => {
     const req = httpMock.expectOne(`${base}/2`);
     expect(req.request.method).toBe('DELETE');
     req.flush(null);
+  });
+
+  it('downloadFlyer GETs the pdf as a blob with the full response', () => {
+    service.downloadFlyer(2).subscribe((response) => {
+      expect(response.body instanceof Blob).toBeTrue();
+      expect(response.headers.get('Content-Disposition')).toContain('filename=course-AWS-SAA.pdf');
+    });
+    const req = httpMock.expectOne(`${base}/2/pdf`);
+    expect(req.request.method).toBe('GET');
+    expect(req.request.responseType).toBe('blob');
+    req.flush(new Blob(['%PDF-fake'], { type: 'application/pdf' }), {
+      headers: { 'Content-Disposition': 'attachment; filename=course-AWS-SAA.pdf' },
+    });
   });
 });

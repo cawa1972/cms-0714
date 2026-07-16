@@ -48,7 +48,8 @@ public sealed class CourseRepository : ICourseRepository
                c.CanRepeat,
                p.Name         AS PartnerName,
                cg.Description AS CourseGroupDescription,
-               ps.Description AS PublishStatusDescription
+               ps.Description AS PublishStatusDescription,
+               ps.IsPublished AS PublishStatusIsPublished
         FROM Course c
              INNER JOIN Partner p        ON p.pkid  = c.Partner_pkid
              LEFT  JOIN CourseGroup cg   ON cg.pkid = c.CourseGroup_pkid

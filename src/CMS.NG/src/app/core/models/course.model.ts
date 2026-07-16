@@ -32,6 +32,8 @@ export interface Course {
   partnerName: string | null;
   courseGroupDescription: string | null;
   publishStatusDescription: string | null;
+  /** Resolved from PublishStatus.IsPublished; drives the flyer PDF's draft watermark. */
+  publishStatusIsPublished: boolean;
 }
 
 /** Write DTO for create/update. pkid is DB-assigned on create; used as the key on edit. */

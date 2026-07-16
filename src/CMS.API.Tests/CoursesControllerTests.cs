@@ -1,6 +1,7 @@
 using CMS.API.Controllers;
 using CMS.API.Models;
 using CMS.API.Tests.Fakes;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Xunit;
 
@@ -52,7 +53,8 @@ public class CoursesControllerTests
         CanRepeat = true,
     };
 
-    private static CoursesController Controller(FakeCourseRepository repo) => new(repo);
+    private static CoursesController Controller(FakeCourseRepository repo)
+        => new(repo, new FakeCourseFlyerRenderer());
 
     // ---- List ----------------------------------------------------------
 
@@ -180,6 +182,54 @@ public class CoursesControllerTests
     public async Task Delete_MissingCourse_ReturnsNotFound()
     {
         var result = await Controller(SeededRepo()).Delete(99);
+
+        Assert.IsType<NotFoundResult>(result);
+    }
+
+    // ---- Flyer PDF -------------------------------------------------------
+
+    /// <summary>GetFlyer writes a response header, so it needs a real HttpContext.</summary>
+    private static CoursesController FlyerController(FakeCourseRepository repo, FakeCourseFlyerRenderer renderer)
+        => new(repo, renderer)
+        {
+            ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() },
+        };
+
+    [Fact]
+    public async Task GetFlyer_ExistingCourse_ReturnsPdfFromRenderer()
+    {
+        var renderer = new FakeCourseFlyerRenderer();
+        var controller = FlyerController(SeededRepo(), renderer);
+
+        var result = await controller.GetFlyer(1);
+
+        var file = Assert.IsType<FileContentResult>(result);
+        Assert.Equal("application/pdf", file.ContentType);
+        Assert.Equal("%PDF-fake"u8.ToArray(), file.FileContents);
+        Assert.Equal("AZ-900", renderer.LastRendered?.CourseId);
+    }
+
+    [Fact]
+    public async Task GetFlyer_SetsBothContentDispositionFilenames()
+    {
+        var controller = FlyerController(SeededRepo(), new FakeCourseFlyerRenderer());
+
+        await controller.GetFlyer(1);
+
+        var header = controller.Response.Headers.ContentDisposition.ToString();
+        Assert.Contains("attachment", header);
+        Assert.Contains("filename=course-AZ-900.pdf", header);
+        // RFC 5987: UTF-8 percent-encoded 課程簡介-Azure 基礎.pdf
+        Assert.Contains("filename*=UTF-8''", header);
+        Assert.Contains("%E8%AA%B2%E7%A8%8B%E7%B0%A1%E4%BB%8B", header); // 課程簡介
+    }
+
+    [Fact]
+    public async Task GetFlyer_MissingCourse_ReturnsNotFound()
+    {
+        var controller = FlyerController(SeededRepo(), new FakeCourseFlyerRenderer());
+
+        var result = await controller.GetFlyer(99);
 
         Assert.IsType<NotFoundResult>(result);
     }

@@ -39,6 +39,7 @@ const COURSE: Course = {
   partnerName: '甲骨文',
   courseGroupDescription: null,
   publishStatusDescription: '已發布',
+  publishStatusIsPublished: true,
 };
 
 function setup(routeId: string | null) {
