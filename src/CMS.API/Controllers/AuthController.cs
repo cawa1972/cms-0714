@@ -54,10 +54,17 @@ public class AuthController : ControllerBase
         // All three checks collapse to the same 401 so the caller cannot tell them apart.
         if (credential is null
             || !credential.IsActive
-            || credential.PasswordHash != PasswordHasher.Hash(request.Password))
+            || !PasswordHasher.Verify(request.Password, credential.PasswordHash))
         {
             return Unauthorized(new { message = InvalidCredentialsMessage });
         }
+
+        // The password is correct, so we hold the plain text — the only moment we can upgrade a hash
+        // stored under weaker parameters (legacy unsalted SHA-256, or a lower iteration count).
+        // Transparent to the user: PasswordUpdatedTime is deliberately left alone, since the password
+        // itself did not change. Best-effort — a failed upgrade must never fail the sign-in.
+        if (PasswordHasher.NeedsRehash(credential.PasswordHash))
+            await _repository.UpgradePasswordHashAsync(credential.UserId, PasswordHasher.Hash(request.Password));
 
         var signingKey = _signingKeyProvider.GetSigningKey();
         if (string.IsNullOrWhiteSpace(signingKey))
@@ -105,8 +112,8 @@ public class AuthController : ControllerBase
     /// Changes the signed-in user's own password. The target UserId comes from the JWT — never the
     /// body. Rejects (400, bilingual message, nothing written) when the current password is wrong,
     /// the new password fails the complexity policy (<see cref="PasswordPolicy"/>), or new/confirm
-    /// don't match. On success stores SHA256(new) and stamps PasswordUpdatedTime. No hash is ever
-    /// sent to or from the client.
+    /// don't match. On success stores a freshly salted <see cref="PasswordHasher"/> hash of the new
+    /// password and stamps PasswordUpdatedTime. No hash is ever sent to or from the client.
     /// </summary>
     [HttpPost("change-password")]
     public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest request)
@@ -119,8 +126,8 @@ public class AuthController : ControllerBase
         if (credential is null)
             return NotFound();
 
-        // 1. The current password must hash to the stored PasswordHash.
-        if (credential.PasswordHash != PasswordHasher.Hash(request.CurrentPassword))
+        // 1. The current password must verify against the stored PasswordHash.
+        if (!PasswordHasher.Verify(request.CurrentPassword, credential.PasswordHash))
             return BadRequest(new { message = CurrentPasswordIncorrectMessage });
 
         // 2. The new password must satisfy the complexity policy.

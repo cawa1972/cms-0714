@@ -24,4 +24,12 @@ public interface IAuthRepository
     /// the complexity policy are the caller's job. Returns false if no such user exists.
     /// </summary>
     Task<bool> UpdatePasswordAsync(string userId, string passwordHash);
+
+    /// <summary>
+    /// Re-writes <b>only</b> the <c>PasswordHash</c> for the given UserId, leaving
+    /// <c>PasswordUpdatedTime</c> untouched. This is the re-hash path for a password whose stored hash
+    /// used weaker parameters: the secret is unchanged, so stamping the column would misreport when
+    /// the user last changed their password. Returns false if no such user exists.
+    /// </summary>
+    Task<bool> UpgradePasswordHashAsync(string userId, string passwordHash);
 }
