@@ -2,6 +2,7 @@
 
 ## Auth interceptor: parse Blob error bodies on 5xx
 
+- **Priority:** P3
 - **What:** The flyer download introduced the app's first `responseType: 'blob'` request. On a
   5xx, Angular delivers `error.error` as a Blob, so the interceptor's `body?.message` probe
   misses and users always see the generic fallback toast instead of the exception middleware's
@@ -11,11 +12,12 @@
 - **Cons:** Touches the shared auth interceptor; current behavior (generic toast) is degraded
   but correct, so priority is low.
 - **Context:** Flagged by the /ship red-team review (2026-07-16) as an integration-boundary gap
-  in `src/CMS.NG/src/app/core/interceptors/auth.interceptor.ts:36`. Priority: P3.
+  in `src/CMS.NG/src/app/core/interceptors/auth.interceptor.ts:36`.
 - **Depends on / blocked by:** Nothing.
 
 ## Multi-course catalog PDF export
 
+- **Priority:** P2
 - **What:** Select multiple courses in the course list → download one paginated PDF catalog
   (cover page + one flyer-style page per course).
 - **Why:** The "10x version" of the course-flyer feature — same brand-quality output at scale
@@ -32,6 +34,7 @@
 
 ## Promotion-aware flyer + anonymous share link
 
+- **Priority:** P3
 - **What:** (a) Stamp a live promotion ribbon/callout on the flyer when `Promotion2` has an
   active `ScheduleOn`–`ScheduleOff` window matching the course's partner or course group.
   (b) "Copy share link" button minting a short-lived signed token so the flyer PDF can be
@@ -49,3 +52,7 @@
   `Promotion2` lives in `database/promotion.sql`; no repository/feature exists for it yet.
 - **Depends on / blocked by:** Course flyer PDF feature shipped; a Promotion feature
   (repository + at least read access) built.
+
+## Completed
+
+_(none yet)_
