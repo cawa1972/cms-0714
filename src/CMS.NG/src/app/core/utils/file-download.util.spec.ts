@@ -62,6 +62,16 @@ describe('filenameFromContentDisposition', () => {
     ).toBeNull();
   });
 
+  it('rejects names containing control characters', () => {
+    expect(
+      filenameFromContentDisposition("attachment; filename*=UTF-8''evil%0Aname.pdf"),
+    ).toBeNull();
+  });
+
+  it('only matches filename at a parameter boundary', () => {
+    expect(filenameFromContentDisposition('attachment; xfilename="x.pdf"')).toBeNull();
+  });
+
   it('returns null for a missing header', () => {
     expect(filenameFromContentDisposition(null)).toBeNull();
   });
@@ -102,7 +112,7 @@ describe('saveBlob', () => {
     expect(clickSpy).toHaveBeenCalledTimes(1);
     // Revocation is deferred (Safari can cancel a download whose URL is revoked synchronously).
     expect(revokeSpy).not.toHaveBeenCalled();
-    jasmine.clock().tick(1);
+    jasmine.clock().tick(1500);
     expect(revokeSpy).toHaveBeenCalledWith('blob:fake-url');
   });
 });

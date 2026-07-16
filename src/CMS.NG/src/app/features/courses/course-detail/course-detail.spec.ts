@@ -228,4 +228,33 @@ describe('CourseDetail', () => {
     expect(addSpy).not.toHaveBeenCalled();
     expect(component['downloadingFlyer']()).toBeFalse();
   });
+
+  it('toasts a generic message on network failure (status 0)', () => {
+    const { component, serviceSpy } = setup();
+    const messages = TestBed.inject(MessageService);
+    const addSpy = spyOn(messages, 'add');
+    serviceSpy.downloadFlyer.and.returnValue(
+      throwError(() => new HttpErrorResponse({ status: 0 })),
+    );
+
+    component.downloadFlyer();
+
+    expect(addSpy).toHaveBeenCalledWith(
+      jasmine.objectContaining({ severity: 'error', detail: '請稍後再試。' }),
+    );
+    expect(component['downloadingFlyer']()).toBeFalse();
+  });
+
+  it('stays silent on 401 (the auth interceptor redirects to login)', () => {
+    const { component, serviceSpy } = setup();
+    const messages = TestBed.inject(MessageService);
+    const addSpy = spyOn(messages, 'add');
+    serviceSpy.downloadFlyer.and.returnValue(
+      throwError(() => new HttpErrorResponse({ status: 401 })),
+    );
+
+    component.downloadFlyer();
+
+    expect(addSpy).not.toHaveBeenCalled();
+  });
 });

@@ -49,12 +49,15 @@ public sealed class CourseFlyerDocument : IDocument
 
     private static TimeZoneInfo ResolveTaiwanTimeZone()
     {
-        // IANA id works cross-platform on .NET 6+ (ICU); Windows id as fallback; local as last resort.
+        // IANA id works cross-platform on .NET 6+ (ICU); Windows id as fallback; local as last
+        // resort. Catches Exception, not just TimeZoneNotFoundException: this initializes a
+        // static field, and .NET caches a type-initializer failure — any other throw here
+        // (corrupt tz data) would otherwise poison every flyer render until process restart.
         try { return TimeZoneInfo.FindSystemTimeZoneById("Asia/Taipei"); }
-        catch (TimeZoneNotFoundException)
+        catch (Exception)
         {
             try { return TimeZoneInfo.FindSystemTimeZoneById("Taipei Standard Time"); }
-            catch (TimeZoneNotFoundException) { return TimeZoneInfo.Local; }
+            catch (Exception) { return TimeZoneInfo.Local; }
         }
     }
 

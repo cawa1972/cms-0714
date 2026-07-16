@@ -10,9 +10,12 @@
  *   Blob ──▶ URL.createObjectURL ──▶ hidden <a download=…> click ──▶ revokeObjectURL
  */
 
-// Windows-illegal characters plus ASCII control characters (C0 + DEL).
+// Windows-illegal characters plus control characters — C0, DEL, AND C1 (U+0080–U+009F):
+// the API-side mirror uses char.IsControl, which includes C1 (e.g. U+0085 NEL survives
+// NVARCHAR round-trips), so the two rule sets must match.
 // eslint-disable-next-line no-control-regex
-const ILLEGAL_FILENAME_CHARS = new RegExp('[\\\\/:*?"<>|\\u0000-\\u001F\\u007F]', 'g');
+const ILLEGAL_FILENAME_CHARS = new RegExp('[\\\\/:*?"<>|\\u0000-\\u001F\\u007F-\\u009F]', 'g');
+const CONTROL_CHARS = new RegExp('[\\u0000-\\u001F\\u007F-\\u009F]');
 const MAX_COMPONENT_LENGTH = 72;
 
 /** Illegal + control chars → '-'; trims; strips trailing dots/spaces; caps at 72 chars. */
@@ -59,10 +62,12 @@ export function filenameFromContentDisposition(header: string | null): string | 
 
   const accept = (value: string | undefined): string | null => {
     const name = value?.trim();
-    return name && !name.includes('/') && !name.includes('\\') ? name : null;
+    return name && !name.includes('/') && !name.includes('\\') && !CONTROL_CHARS.test(name)
+      ? name
+      : null;
   };
 
-  const star = /filename\*=UTF-8''([^;]+)/i.exec(header);
+  const star = /(?:^|;\s*)filename\*=UTF-8''([^;]+)/i.exec(header);
   if (star) {
     try {
       const decoded = accept(decodeURIComponent(star[1]));
@@ -74,7 +79,8 @@ export function filenameFromContentDisposition(header: string | null): string | 
     }
   }
 
-  const plain = /filename=(?:"([^"]*)"|([^;]+))/i.exec(header);
+  // Anchored to a parameter boundary so e.g. "xfilename=..." never matches.
+  const plain = /(?:^|;\s*)filename=(?:"([^"]*)"|([^;]+))/i.exec(header);
   return accept(plain?.[1] ?? plain?.[2]);
 }
 
@@ -86,6 +92,6 @@ export function saveBlob(blob: Blob, filename: string): void {
   anchor.download = filename;
   anchor.click();
   // Deferred revoke: revoking synchronously after click() can cancel the still-starting
-  // download in Safari (and historically Firefox).
-  setTimeout(() => URL.revokeObjectURL(url), 0);
+  // download in Safari (and historically Firefox). A generous delay costs nothing.
+  setTimeout(() => URL.revokeObjectURL(url), 1500);
 }
