@@ -132,6 +132,25 @@
 - **Depends on / blocked by:** Course flyer PDF feature shipped; a Promotion feature
   (repository + at least read access) built.
 
+## Data cleanup: Course NINS-1 has 下架日期 before 上架日期
+
+- **Priority:** P3
+- **What:** Course pkid 1980 (`NINS-1`, 網路基礎架構與網路服務(測試)) has 上架日期
+  2023/02/17 and 下架日期 2013/12/17 — ten years backwards. Correct the seed data directly
+  (SQL update) once the intended real end date is known.
+- **Why:** `/qa` on 2026-07-17 found and fixed the code-level bug that let this happen (ISSUE-001 —
+  see `.gstack/qa-reports/qa-report-cms-2026-07-17.md`), but the fix only blocks *new* invalid
+  saves; it does not retroactively correct rows already in the database. This record now can't be
+  re-saved unchanged through the UI (the new validation rejects it), so it will stay stuck until
+  someone corrects the date and saves.
+- **Pros:** One-row `UPDATE`; trivial once someone confirms the intended date range.
+- **Cons:** Needs a human decision on what the correct 下架日期 should be — not guessable from
+  the data alone.
+- **Context:** `/qa` full-project sweep (2026-07-17). Full detail:
+  `.gstack/qa-reports/qa-report-cms-2026-07-17.md`.
+- **Depends on / blocked by:** Nothing — just needs the correct date.
+
 ## Completed
 
-_(none yet)_
+- **Course form accepted end date before start date** — fixed by `/qa` on 2026-07-17,
+  commit `24edf1e`. See `.gstack/qa-reports/qa-report-cms-2026-07-17.md` (ISSUE-001).
