@@ -2,5 +2,7 @@
 // via angular.json fileReplacements.
 export const environment = {
   production: true,
-  apiBaseUrl: 'http://localhost:5000/api',
+  // Relative path: the SPA and API are served from the same IIS host, so API
+  // calls resolve against the page origin (e.g. https://host/api/...).
+  apiBaseUrl: '/api',
 };
