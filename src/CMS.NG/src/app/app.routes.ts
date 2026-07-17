@@ -1,5 +1,16 @@
+import { inject } from '@angular/core';
 import { Routes } from '@angular/router';
 import { authGuard } from '@core/guards/auth.guard';
+import { adminGuard } from '@core/guards/admin.guard';
+import { AuthService } from '@core/services/auth.service';
+import { homeRouteFor } from '@core/auth/app-roles';
+
+/**
+ * Landing target for `''` and the wildcard. Resolved per navigation rather than hardcoded, because
+ * the Admin pages are guarded: a static redirect to /app-roles would bounce every non-admin off
+ * their own home page. Runs in an injection context, so `inject` is available.
+ */
+const homeRedirect = () => homeRouteFor(inject(AuthService).roles());
 
 export const routes: Routes = [
   {
@@ -18,7 +29,7 @@ export const routes: Routes = [
 // The authenticated feature routes, rendered inside the Shell's outlet.
 function appRoutes(): Routes {
   return [
-  { path: '', redirectTo: 'app-roles', pathMatch: 'full' },
+  { path: '', redirectTo: homeRedirect, pathMatch: 'full' },
   {
     path: 'profile',
     loadComponent: () => import('./features/profile/profile').then((m) => m.Profile),
@@ -30,73 +41,86 @@ function appRoutes(): Routes {
         './features/featured-promo-items/featured-promo-item-board/featured-promo-item-board'
       ).then((m) => m.FeaturedPromoItemBoard),
   },
+  // 系統管理 Admin — the whole area behind one guard, mirroring the backend's controller-wide
+  // [Authorize(Roles = AppRoles.Admin)] on AppUsers/AppRoles/PublishStatuses. Any new
+  // system/management feature belongs in here, not below.
   {
-    path: 'app-roles',
-    loadComponent: () =>
-      import('./features/app-roles/app-role-list/app-role-list').then((m) => m.AppRoleList),
-  },
-  {
-    path: 'app-roles/new',
-    loadComponent: () =>
-      import('./features/app-roles/app-role-form/app-role-form').then((m) => m.AppRoleForm),
-  },
-  {
-    path: 'app-roles/:id',
-    loadComponent: () =>
-      import('./features/app-roles/app-role-detail/app-role-detail').then((m) => m.AppRoleDetail),
-  },
-  {
-    path: 'app-roles/:id/edit',
-    loadComponent: () =>
-      import('./features/app-roles/app-role-form/app-role-form').then((m) => m.AppRoleForm),
-  },
-  {
-    path: 'app-users',
-    loadComponent: () =>
-      import('./features/app-users/app-user-list/app-user-list').then((m) => m.AppUserList),
-  },
-  {
-    path: 'app-users/new',
-    loadComponent: () =>
-      import('./features/app-users/app-user-form/app-user-form').then((m) => m.AppUserForm),
-  },
-  {
-    path: 'app-users/:id',
-    loadComponent: () =>
-      import('./features/app-users/app-user-detail/app-user-detail').then((m) => m.AppUserDetail),
-  },
-  {
-    path: 'app-users/:id/edit',
-    loadComponent: () =>
-      import('./features/app-users/app-user-form/app-user-form').then((m) => m.AppUserForm),
-  },
-  {
-    path: 'publish-statuses',
-    loadComponent: () =>
-      import('./features/publish-statuses/publish-status-list/publish-status-list').then(
-        (m) => m.PublishStatusList,
-      ),
-  },
-  {
-    path: 'publish-statuses/new',
-    loadComponent: () =>
-      import('./features/publish-statuses/publish-status-form/publish-status-form').then(
-        (m) => m.PublishStatusForm,
-      ),
-  },
-  {
-    path: 'publish-statuses/:id',
-    loadComponent: () =>
-      import('./features/publish-statuses/publish-status-detail/publish-status-detail').then(
-        (m) => m.PublishStatusDetail,
-      ),
-  },
-  {
-    path: 'publish-statuses/:id/edit',
-    loadComponent: () =>
-      import('./features/publish-statuses/publish-status-form/publish-status-form').then(
-        (m) => m.PublishStatusForm,
-      ),
+    path: '',
+    canActivate: [adminGuard],
+    children: [
+      {
+        path: 'app-roles',
+        loadComponent: () =>
+          import('./features/app-roles/app-role-list/app-role-list').then((m) => m.AppRoleList),
+      },
+      {
+        path: 'app-roles/new',
+        loadComponent: () =>
+          import('./features/app-roles/app-role-form/app-role-form').then((m) => m.AppRoleForm),
+      },
+      {
+        path: 'app-roles/:id',
+        loadComponent: () =>
+          import('./features/app-roles/app-role-detail/app-role-detail').then(
+            (m) => m.AppRoleDetail,
+          ),
+      },
+      {
+        path: 'app-roles/:id/edit',
+        loadComponent: () =>
+          import('./features/app-roles/app-role-form/app-role-form').then((m) => m.AppRoleForm),
+      },
+      {
+        path: 'app-users',
+        loadComponent: () =>
+          import('./features/app-users/app-user-list/app-user-list').then((m) => m.AppUserList),
+      },
+      {
+        path: 'app-users/new',
+        loadComponent: () =>
+          import('./features/app-users/app-user-form/app-user-form').then((m) => m.AppUserForm),
+      },
+      {
+        path: 'app-users/:id',
+        loadComponent: () =>
+          import('./features/app-users/app-user-detail/app-user-detail').then(
+            (m) => m.AppUserDetail,
+          ),
+      },
+      {
+        path: 'app-users/:id/edit',
+        loadComponent: () =>
+          import('./features/app-users/app-user-form/app-user-form').then((m) => m.AppUserForm),
+      },
+      {
+        path: 'publish-statuses',
+        loadComponent: () =>
+          import('./features/publish-statuses/publish-status-list/publish-status-list').then(
+            (m) => m.PublishStatusList,
+          ),
+      },
+      {
+        path: 'publish-statuses/new',
+        loadComponent: () =>
+          import('./features/publish-statuses/publish-status-form/publish-status-form').then(
+            (m) => m.PublishStatusForm,
+          ),
+      },
+      {
+        path: 'publish-statuses/:id',
+        loadComponent: () =>
+          import('./features/publish-statuses/publish-status-detail/publish-status-detail').then(
+            (m) => m.PublishStatusDetail,
+          ),
+      },
+      {
+        path: 'publish-statuses/:id/edit',
+        loadComponent: () =>
+          import('./features/publish-statuses/publish-status-form/publish-status-form').then(
+            (m) => m.PublishStatusForm,
+          ),
+      },
+    ],
   },
   {
     path: 'partners',
@@ -166,6 +190,6 @@ function appRoutes(): Routes {
         (m) => m.CourseGroupForm,
       ),
   },
-    { path: '**', redirectTo: 'app-roles' },
+    { path: '**', redirectTo: homeRedirect },
   ];
 }

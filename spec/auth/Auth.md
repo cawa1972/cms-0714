@@ -24,6 +24,7 @@ It builds directly on the [AppUser](./AppUser.md) feature: credentials are check
 | Authorization | Global — every controller requires an authenticated user **except** `AuthController` |
 | Token claims | `userId`, `userName`, `sub`, one `role` claim per assigned RoleId |
 | Frontend session | Profile in **session storage** (`cms.auth`) — never local storage |
+| Frontend Admin gating | `adminGuard` on the 系統管理 routes + `adminOnly` sidebar filter (UX only — the API is the boundary) |
 | Never returned | `PasswordHash` (absent from every response DTO and model) |
 
 ---
@@ -261,10 +262,37 @@ Functional interceptor registered via `withInterceptors([authInterceptor])`:
 - Attaches `Authorization: Bearer <token>` to every outgoing request when a token is present.
 - On any **401** response → `clearSession()` + `router.navigate(['/login'])`, then rethrows.
 
-### Route guard (`core/guards/auth.guard.ts`)
+### Route guards
 
-`CanActivateFn` — returns `true` when a token is in session storage, otherwise
-`router.createUrlTree(['/login'])`. The `/login` route is **not** guarded, so it stays public.
+Two `CanActivateFn`s stack: `authGuard` answers "signed in at all?", `adminGuard` answers "may enter
+系統管理?". Both are UX affordances — a client-side guard can be bypassed by anyone willing to edit
+their own session storage, so **the API's `[Authorize(Roles = …)]` remains the only real boundary**.
+The guards exist so a legitimate user never lands on a page that would only 403 at them.
+
+#### `core/guards/auth.guard.ts`
+
+Returns `true` when a token is in session storage, otherwise `router.createUrlTree(['/login'])`. The
+`/login` route is **not** guarded, so it stays public.
+
+#### `core/guards/admin.guard.ts`
+
+Returns `true` when `auth.hasRole(AppRoles.Admin)`. Otherwise it toasts
+`沒有權限存取此頁面。(You do not have permission to access this page.)` (severity `warn`, summary
+`無權限`) and redirects to `homeRouteFor(auth.roles())`. It runs **after** `authGuard` (which owns the
+signed-out case), so it only ever judges an authenticated user.
+
+#### `core/auth/app-roles.ts`
+
+Mirrors the backend's `Security/AppRoles.cs` so the role string has one source per side, and owns
+`homeRouteFor(roles)` — the single answer to "where does this user live?":
+
+| Roles include `Admin` | Home |
+|-----------------------|------|
+| yes | `/app-roles` |
+| no  | `/featured-promo-items` (上稿作業, the first item in their menu) |
+
+Both the `''` redirect and `adminGuard`'s rejection target call it, so the route table and the guard
+can never disagree about where home is.
 
 ### Routing & shell
 
@@ -272,7 +300,14 @@ Functional interceptor registered via `withInterceptors([authInterceptor])`:
 - Public route `login` → the `Login` page.
 - Everything else is children of a guarded parent route rendering the **`Shell`** layout
   (`layout/shell/`): `{ path: '', loadComponent: Shell, canActivate: [authGuard], children: [...] }`.
-  `{ path: '**', redirectTo: '' }`.
+- **The 系統管理 routes sit under one path-less `canActivate: [adminGuard]` parent** inside those
+  children — `app-roles`, `app-users`, `publish-statuses` and all their `/new`, `/:id`, `/:id/edit`
+  descendants. This mirrors the backend's controller-wide `[Authorize(Roles = AppRoles.Admin)]`:
+  **any new system/management feature goes inside that parent**, and is gated by construction rather
+  than by remembering to add a guard.
+- `''` and `**` both `redirectTo` a **function** (not a static path) that resolves
+  `homeRouteFor(inject(AuthService).roles())`. A static redirect to `/app-roles` would bounce every
+  non-admin off their own landing page the moment `adminGuard` exists.
 - `Shell` = sidebar + header + content outlet. The header shows the signed-in `userName` and a
   **Logout** action (`clearSession()` → `/login`).
 
@@ -284,8 +319,12 @@ navigate to `/`; on 401 show `帳號或密碼錯誤。`, otherwise a generic err
 ### Admin-menu gating
 
 The sidebar item **系統管理 Admin** (children 角色/發布狀態/使用者) carries an `adminOnly` flag and is
-shown only when `auth.hasRole('Admin')`; sections left empty are dropped. Roles come from the stored
-token, not an API call.
+shown only when `auth.hasRole(AppRoles.Admin)`; sections left empty are dropped. Roles come from the
+stored token, not an API call.
+
+Hiding the menu is **not** enough on its own: it stops the click, not the typed URL, the bookmark, or
+the back button. `adminGuard` covers those, and the two read the same `AppRoles.Admin` constant so the
+menu and the routes agree.
 
 ---
 
@@ -309,6 +348,16 @@ token, not an API call.
 - `auth.interceptor.spec.ts` — attaches the Bearer header; no header when no token; a **401** clears
   session storage and redirects to `/login`.
 - `auth.guard.spec.ts` — redirects to `/login` (UrlTree) when no token; allows activation with a token.
+- `admin.guard.spec.ts` — allows an `Admin` (alone or among several roles); redirects a non-admin, a
+  role-less token, and a near-miss role name (`NotAdminReally`) to `/featured-promo-items`; toasts
+  once on rejection and never on success.
+- `app-roles.spec.ts` — `homeRouteFor` maps Admin → `/app-roles`, everyone else → `/featured-promo-items`,
+  and never returns an Admin route for a non-admin.
+- `app.routes.spec.ts` — drives the **real route table through the real Router**, so the wiring is
+  under test and not just the guard's decision: a signed-out visitor to `/app-users` lands on
+  `/login`; an admin lands on `/app-roles` from `/` and reaches every Admin area including nested
+  `/:id/edit`; a non-admin lands on `/featured-promo-items`, is bounced off every Admin area and off
+  an unknown URL, and still reaches `/courses`, `/partners`, `/profile`.
 - `shell.spec.ts` — the **系統管理 Admin** menu shows only when roles include `Admin`; the signed-in
   user name renders in the shell.
 
@@ -341,10 +390,13 @@ token, not an API call.
 | `CMS.NG/src/app/core/services/auth.service.ts` | create |
 | `CMS.NG/src/app/core/interceptors/auth.interceptor.ts` | create |
 | `CMS.NG/src/app/core/guards/auth.guard.ts` | create |
+| `CMS.NG/src/app/core/guards/admin.guard.ts` | create (role gate for 系統管理) |
+| `CMS.NG/src/app/core/auth/app-roles.ts` | create (`AppRoles` constant + `homeRouteFor`) |
+| `CMS.NG/src/app/layout/shell/shell.ts` | modify (use shared `AppRoles.Admin`, not a local literal) |
 | `CMS.NG/src/app/features/auth/login/*` | create |
 | `CMS.NG/src/app/layout/shell/*` | create (moved shell out of `App`) |
 | `CMS.NG/src/app/app.ts` + `app.html` + `app.css` | modify (thin root) |
-| `CMS.NG/src/app/app.routes.ts` | modify (public `/login`, guarded `Shell` parent) |
+| `CMS.NG/src/app/app.routes.ts` | modify (public `/login`, guarded `Shell` parent, `adminGuard` parent for 系統管理, role-aware `''`/`**` redirect) |
 | `CMS.NG/src/app/app.config.ts` | modify (register `authInterceptor`) |
 
 ### Tests
@@ -356,4 +408,5 @@ token, not an API call.
 | `CMS.API.Tests/Fakes/FakeAuthRepository.cs` + `FakeSigningKeyProvider.cs` | create |
 | `CMS.API.Tests/CMS.API.Tests.csproj` | modify (add `Microsoft.AspNetCore.Mvc.Testing`) |
 | `CMS.NG/.../auth.service.spec.ts`, `auth.interceptor.spec.ts`, `auth.guard.spec.ts`, `layout/shell/shell.spec.ts` | create |
+| `CMS.NG/.../core/guards/admin.guard.spec.ts`, `core/auth/app-roles.spec.ts`, `app.routes.spec.ts` | create |
 | `CMS.NG/src/app/app.spec.ts` | modify (thin-root assertions) |

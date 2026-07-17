@@ -3,6 +3,7 @@ import { NgClass } from '@angular/common';
 import { Router, RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 
 import { AuthService } from '@core/services/auth.service';
+import { AppRoles } from '@core/auth/app-roles';
 
 interface NavItem {
   label: string;
@@ -18,9 +19,6 @@ interface NavSection {
   header: string;
   items: NavItem[];
 }
-
-/** Role that unlocks the 系統管理 Admin menu. */
-const ADMIN_ROLE = 'Admin';
 
 /**
  * Authenticated app shell: sidebar navigation, a header showing the signed-in user with a logout
@@ -39,7 +37,8 @@ export class Shell {
   protected readonly title = signal('CMS');
   protected readonly collapsed = signal(false);
   protected readonly userName = this.auth.userName;
-  protected readonly isAdmin = computed(() => this.auth.hasRole(ADMIN_ROLE));
+  // Hides the 系統管理 Admin menu; adminGuard enforces the same rule on the routes themselves.
+  protected readonly isAdmin = computed(() => this.auth.hasRole(AppRoles.Admin));
 
   // The full menu; items flagged adminOnly are filtered out in `navSections` for non-admins.
   private readonly allSections = signal<NavSection[]>([
