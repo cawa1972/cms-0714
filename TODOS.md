@@ -1,5 +1,84 @@
 # TODOS
 
+## SECURITY: no TLS on any deployed IIS binding
+
+- **Priority:** P1
+- **What:** `setup-iis.ps1` creates both sites with `New-Website -Port`, which defaults to the
+  **http** protocol — no `-Ssl`, no `New-WebBinding -Protocol https`, no certificate step. Add an
+  HTTPS binding + cert, redirect HTTP→HTTPS, and wire `UseHsts()` into `Program.cs`.
+- **Why:** Passwords and 24-hour JWTs cross the LAN in cleartext. `LoginRequest.cs:6` and
+  `ChangePasswordRequest.cs:7` both document that passwords travel "in plain text (over TLS)" — a
+  contract the deployment does not satisfy. Anyone on the same L2 segment with a packet sniffer
+  reads an Admin password straight out of the TCP payload, then replays the token from any host
+  (`Program.cs:88-89` sets `ValidateIssuer=false`/`ValidateAudience=false`, so nothing binds it to
+  a channel).
+- **Pros:** The only finding needing no prior access at all. Cert + binding is a contained change
+  to `setup-iis.ps1`; `UseHsts()` is one line.
+- **Cons:** Needs a certificate (internal CA, or self-signed for an intranet box). `New-Website`
+  with no `-HostHeader` binds `*:80`/`*:5001`, so the "Localhost" default is LAN-reachable too —
+  don't assume the default config is safe.
+- **DO NOT fix by changing `ASPNETCORE_ENVIRONMENT`.** `DEPLOY-IIS.md:138` and
+  `deploy/CMS.API/web.config.template:24-28` justify pinning `Development` by claiming Program.cs
+  calls `UseHsts()`/`UseHttpsRedirection()` only when `IsProduction()`. **That code does not
+  exist** — grep for `UseHttpsRedirection|UseHsts|RequireHttps` across `src` returns nothing.
+  Both docs are stale and must be corrected as part of this fix.
+- **Context:** /cso full audit (2026-07-17), Finding 1, HIGH, confidence 8/10, independently
+  verified. Full detail: `.gstack/security-reports/2026-07-17-112429.json`.
+- **Depends on / blocked by:** A certificate decision (internal CA vs. self-signed).
+
+## SECURITY: shared default password with no forced rotation
+
+- **Priority:** P1
+- **What:** Add a `MustChangePassword` flag (or read `PasswordUpdatedTime` against a policy), set
+  it in `AppUserRepository.CreateAsync` and `ResetPasswordAsync`, and check it in
+  `AuthController.Login` before issuing a token — force the change-password flow.
+- **Why:** `CreateAsync` (:96) and `ResetPasswordAsync` (:181) both resolve one global
+  `SysConfig 'appConfig'.defaultPassword`. Salting makes the stored hashes differ, but the
+  **plaintext is identical for every user ever created or reset**. Login (`AuthController.cs:55-60`)
+  checks only null/`IsActive`/`Verify` — nothing consults password age. No `MustChangePassword`
+  column exists in `database/auth.sql:25-36`; `PasswordUpdatedTime` is stamped on reset (:186) but
+  never read by any authorization path. Exploit chain: any ex-onboarded user knows the default →
+  pulls the roster from `GET /api/lookups/app-users` (no role attribute, returns every row to any
+  authenticated caller) → sprays it, with no lockout to slow them. An admin who was reset and
+  hasn't signed back in yields an Admin token.
+- **Pros:** Breaks the chain at its source. Cheap secondary win: restrict
+  `/api/lookups/app-users` to Admin — it has zero non-admin consumers today (`lookup.service.ts:13`
+  is called only from `app-role-form.ts:61` and `app-role-detail.ts:33`, both behind `adminGuard`).
+- **Cons:** Touches schema, repository, controller, and the Angular login flow. Restricting the
+  lookup contradicts the `spec/cross-cutting.md` rule that `/api/lookups/*` is the non-admin picker
+  surface — decide deliberately.
+- **Check before fixing:** `ResetPasswordAuthorizationTests.cs:145` hard-codes `CMS4fun#` as the
+  default. Suppressed as a test fixture (it appears nowhere in non-test code), but it does not read
+  like a placeholder. **If it matches the live SysConfig value, the key to this exploit chain is in
+  a committed file** — verify against the database and rotate the value if so.
+- **Context:** /cso full audit (2026-07-17), Finding 2, HIGH, confidence 8/10, independently
+  verified. Full detail: `.gstack/security-reports/2026-07-17-112429.json`.
+- **Depends on / blocked by:** Nothing.
+
+## SECURITY: Swagger served unauthenticated in every environment
+
+- **Priority:** P2
+- **What:** Gate `Program.cs:113-117` on `app.Environment.IsDevelopment()`, or add
+  `.RequireAuthorization()` and move the registration below line 122. Delete the false comment at
+  `deploy/CMS.API/web.config.template:28`.
+- **Why:** `UseSwagger()`/`UseSwaggerUI()` are unconditional — no `IsDevelopment()` gate exists
+  anywhere in `src`. The global `AuthorizeFilter` cannot cover them: it is an **MVC filter**, so it
+  runs only inside the action pipeline reached via `MapControllers()` (:124). Independently fatal —
+  Swagger is registered at :113, *before* `UseAuthentication()` at :121. `setup-iis.ps1:228` binds
+  the API to `*:5001` with no host header, so any unauthenticated party on the network can
+  `GET /swagger/v1/swagger.json` and receive the full API map including every Admin-only route.
+  The loopback CORS policy (`Program.cs:40`) does not help — it constrains browser JS, not curl.
+- **Pros:** Two-line change. Optionally bind the API site to `127.0.0.1`, since the ARR proxy is
+  its only intended caller.
+- **Cons:** Loses Swagger as a post-deploy smoke test on the server (`DEPLOY-IIS.md:149` leans on
+  it for troubleshooting). Disclosure only — the endpoints themselves still enforce auth.
+- **Trap:** `web.config.template:28` claims "Swagger is registered ONLY when IsDevelopment()".
+  It is stale and false. Anyone who trusts it will believe flipping the environment name closed
+  this. It did not.
+- **Context:** /cso full audit (2026-07-17), Finding 3, MEDIUM, confidence 9/10, independently
+  verified. Full detail: `.gstack/security-reports/2026-07-17-112429.json`.
+- **Depends on / blocked by:** Nothing.
+
 ## Auth interceptor: parse Blob error bodies on 5xx
 
 - **Priority:** P3

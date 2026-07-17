@@ -1,0 +1,192 @@
+{
+  "version": "2.0.0",
+  "date": "2026-07-17T03:24:29Z",
+  "mode": "daily",
+  "scope": "full",
+  "diff_mode": false,
+  "phases_run": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14],
+  "attack_surface": {
+    "code": {
+      "public_endpoints": 1,
+      "authenticated": 43,
+      "admin": 19,
+      "api": 63,
+      "uploads": 0,
+      "integrations": 0,
+      "background_jobs": 0,
+      "websockets": 0
+    },
+    "infrastructure": {
+      "ci_workflows": 0,
+      "webhook_receivers": 0,
+      "container_configs": 0,
+      "iac_configs": 0,
+      "deploy_targets": 1,
+      "secret_management": "database (SysConfig 'appConfig' JSON blob) + IIS web.config environmentVariables, stamped at deploy time"
+    }
+  },
+  "findings": [
+    {
+      "id": 1,
+      "severity": "HIGH",
+      "confidence": 8,
+      "status": "VERIFIED",
+      "phase": 5,
+      "phase_name": "Infrastructure Shadow Surface",
+      "category": "OWASP A02 — Cryptographic Failures",
+      "fingerprint": "49e6844f16f79f2395dc9be54be6ab3719ab41f60bcb3045749e94e60779f889",
+      "title": "No TLS on any deployed binding — passwords and 24h JWTs travel in cleartext",
+      "file": "deploy/setup-iis.ps1",
+      "line": 228,
+      "commit": "e082af8",
+      "description": "setup-iis.ps1 creates both IIS sites with New-Website -Port, which defaults to the http protocol. There is no -Ssl flag, no New-WebBinding -Protocol https, and no certificate step anywhere in the deploy kit. Program.cs never calls UseHsts() or UseHttpsRedirection(). LoginRequest.cs and ChangePasswordRequest.cs both document that passwords travel 'in plain text (over TLS)' — a contract the shipped deployment does not satisfy. New-Website with no -HostHeader binds *:80 and *:5001, so even the default $remote='Localhost' deploy is reachable in cleartext from the LAN via the host's own IP.",
+      "exploit_scenario": "1. Admin runs setup-iis.ps1 against the documented on-prem server (DEPLOY-IIS.md:76-89). Site CMS is created on *:80 http; site CMS.API on *:5001 http. 2. A user on the office LAN browses http://CMSWEB01/ and signs in; the SPA POSTs {\"userId\":\"admin\",\"password\":\"<plaintext>\"} to http://CMSWEB01/api/Auth/login. 3. An attacker on the same L2 segment (rogue AP, ARP spoof, compromised switch port, promiscuous tcpdump) captures the frame — the password is ASCII in the TCP payload, no decryption involved. 4. The response carries accessToken; every later request repeats Authorization: Bearer <jwt> in cleartext (auth.interceptor.ts:25). 5. Replay: curl -H 'Authorization: Bearer <jwt>' http://CMSWEB01/api/app-users. Program.cs:88-89 sets ValidateIssuer=false and ValidateAudience=false, so nothing binds the token to a channel or client; it authenticates from any host for its full 24h lifetime (JwtTokenService.cs:12). With the captured password the attacker re-authenticates indefinitely. 6. Active variant: MITM port 80 and inject script into the unauthenticated index.html — no HSTS is ever sent — then read sessionStorage['cms.auth'] directly.",
+      "impact": "Full account takeover of any user who signs in while an attacker observes the network, including Admin accounts, which unlocks the Admin-only AppUsers/AppRoles/PublishStatuses controllers. Exposure is LAN-scoped, not internet-scoped.",
+      "recommendation": "Add an HTTPS binding plus certificate to setup-iis.ps1 (New-WebBinding -Protocol https + Set-Item IIS:\\SslBindings), redirect HTTP to HTTPS, and wire UseHsts() into Program.cs behind an env check. Do NOT treat this as an environment-name change: Program.cs contains no UseHttpsRedirection/UseHsts at all, so flipping ASPNETCORE_ENVIRONMENT to Production changes nothing.",
+      "playbook": "Rotate the SysConfig 'appConfig'.symmetricSecurityKey after enabling TLS — any JWT issued over cleartext should be considered potentially observed. Rotating the key invalidates all outstanding tokens. Prompt users to change passwords that were transmitted over HTTP.",
+      "verification": "independently verified"
+    },
+    {
+      "id": 2,
+      "severity": "HIGH",
+      "confidence": 8,
+      "status": "VERIFIED",
+      "phase": 9,
+      "phase_name": "OWASP Top 10 Assessment",
+      "category": "OWASP A07 — Identification and Authentication Failures",
+      "fingerprint": "5b3101c420edb95d06c1c0bc23136563047b528dfa1d9a3a98b9a058ca23468c",
+      "title": "Every created and reset account shares one default password, and nothing forces a change",
+      "file": "src/CMS.API/Repositories/AppUserRepository.cs",
+      "line": 96,
+      "commit": "afb5d00",
+      "description": "CreateAsync (line 96) and ResetPasswordAsync (line 181) both call GetDefaultPasswordHashAsync, which reads a single global SysConfig 'appConfig'.defaultPassword value and hashes it (line 278). Per-hash salting makes the stored hashes differ, but the plaintext is identical for every user ever created or reset. AuthController.Login (lines 55-60) checks only credential-null, IsActive, and PasswordHasher.Verify — nothing consults password age or default-ness before issuing a token at lines 74-82. The AppUser schema (database/auth.sql:25-36) has no MustChangePassword column; a repo-wide grep for MustChangePassword|ForceChange|IsDefaultPassword returns zero hits. PasswordUpdatedTime is stamped on reset (line 186) but never read by any authorization path.",
+      "exploit_scenario": "1. Attacker is any current or former low-privilege user — they learned the default plaintext when they were onboarded or reset, and it is the same value for everyone. 2. They pull the full roster from GET /api/lookups/app-users, which carries no role attribute (LookupsController.cs:7-13) and returns every AppUser row unfiltered (LookupRepository.cs:16-21) to any authenticated caller. 3. They POST each UserId plus the known default to /api/auth/login. No lockout or throttle exists to slow the sweep — grep for RateLimit|Lockout|FailedLogin|AccessFailedCount over src returns no matches. 4. Every account created-but-never-used, or reset-but-not-yet-changed, returns a valid JWT carrying that user's full role claims (AuthController.cs:74-75 passes credential.RoleIds into the token). An admin who was reset and hasn't signed back in yields an Admin token.",
+      "impact": "Account takeover of any dormant or freshly-reset account, at whatever privilege that account holds. The window is unbounded and widest exactly where it matters most — accounts nobody is watching.",
+      "recommendation": "Add a MustChangePassword flag (or compare PasswordUpdatedTime against a rotation policy), set it in CreateAsync and ResetPasswordAsync, and check it in Login before issuing a token — return a challenge that forces the change-password flow. This breaks the chain at its source. Secondary hardening: restrict GET /api/lookups/app-users to Admin (it has no non-admin consumer today — lookup.service.ts:13-15 is called only from app-role-form.ts:61 and app-role-detail.ts:33, both under adminGuard), and add per-account login throttling.",
+      "playbook": "Audit AppUser for rows where PasswordUpdatedTime is unchanged since creation — those accounts are likely still on the default. Force-reset or disable them. Then change the SysConfig 'appConfig'.defaultPassword value, since the current one may be widely known internally.",
+      "verification": "independently verified"
+    },
+    {
+      "id": 3,
+      "severity": "MEDIUM",
+      "confidence": 9,
+      "status": "VERIFIED",
+      "phase": 9,
+      "phase_name": "OWASP Top 10 Assessment",
+      "category": "OWASP A05 — Security Misconfiguration",
+      "fingerprint": "0188e7601d637e95081ce4113021449a44359f75e6eb4564f7c057c88342cb39",
+      "title": "Swagger UI and swagger.json served unauthenticated in every environment",
+      "file": "src/CMS.API/Program.cs",
+      "line": 113,
+      "commit": "e082af8",
+      "description": "app.UseSwagger() and app.UseSwaggerUI() at lines 113-117 are unconditional — a grep for IsDevelopment|IsProduction across src returns no matches. The global AuthorizeFilter (lines 26-29) is an MVC filter: it runs only inside the action-invocation pipeline reached via MapControllers() at line 124, so it cannot apply to Swagger's terminal middleware. Independently fatal: Swagger is registered at 113-117, before UseAuthentication()/UseAuthorization() at 121-122, so no authentication has even run. setup-iis.ps1:228 creates the API site with New-Website -Port 5001 and no -HostHeader, binding *:5001 — all interfaces. The script advertises the endpoint itself at line 292.",
+      "exploit_scenario": "1. An unauthenticated attacker with network access to the host issues GET http://<host>:5001/swagger/v1/swagger.json. 2. They receive the complete API map: every route including the Admin-only app-users/app-roles/publish-statuses controllers, every verb, parameter, and DTO schema. 3. The loopback-only CORS policy (Program.cs:40) does not help — it constrains browser JS, not curl. 4. This is reconnaissance that feeds the Finding #2 spray: the roster endpoint, the login shape, and the reset endpoint are all named in the document. No credentials are in the document and the endpoints themselves still enforce auth, so the impact is disclosure, not direct access.",
+      "impact": "Complete API surface disclosure to any unauthenticated party who can reach port 5001, including the existence and shape of every privileged endpoint.",
+      "recommendation": "Gate lines 113-117 on app.Environment.IsDevelopment(), or add .RequireAuthorization() and move the registration below line 122. Do NOT try to fix this by changing ASPNETCORE_ENVIRONMENT — the comment at deploy/CMS.API/web.config.template:28 claiming 'Swagger is registered ONLY when IsDevelopment()' is stale and false, and anyone who trusts it will believe they closed a hole that is still open. Consider binding the API site to 127.0.0.1 only, since the documented topology has the ARR proxy as its sole intended caller.",
+      "playbook": null,
+      "verification": "independently verified"
+    }
+  ],
+  "supply_chain_summary": {
+    "direct_deps": 19,
+    "transitive_deps": 0,
+    "critical_cves": 0,
+    "high_cves": 1,
+    "install_scripts": 0,
+    "lockfile_present": true,
+    "lockfile_tracked": true,
+    "tools_skipped": [],
+    "notes": "dotnet list package --vulnerable: CMS.API clean; CMS.API.Tests has one High transitive advisory in SQLitePCLRaw.lib.e_sqlite3 2.1.10 (GHSA-2m69-gcr7-jv3q). Test-only, never shipped — not a finding per FP rule 8. npm audit (prod and dev): 0 vulnerabilities. package-lock.json tracked by git. No install/postinstall scripts in production deps."
+  },
+  "filter_stats": {
+    "candidates_scanned": 18,
+    "hard_exclusion_filtered": 4,
+    "confidence_gate_filtered": 3,
+    "verification_filtered": 4,
+    "reported": 3
+  },
+  "totals": {
+    "critical": 0,
+    "high": 2,
+    "medium": 1,
+    "tentative": 0
+  },
+  "appendix_suppressed": [
+    {
+      "title": "ASPNETCORE_ENVIRONMENT=Development stamped into the deployed web.config",
+      "confidence": 9,
+      "verdict": "NOT a vulnerability — suppressed",
+      "reason": "deploy.ps1:67 does stamp Development. But ASP.NET Core's auto-added DeveloperExceptionPage sits OUTSIDE ExceptionHandlingMiddleware (Program.cs:111), which catches every exception and writes a generic 500 without rethrowing (ExceptionHandlingMiddleware.cs:30-41). The one rethrow path (line 37-38, Response.HasStarted) is the exact path on which the developer page also refuses to write. No stack trace can reach a client. appsettings.Development.json holds only log levels — no secrets. Real defect here is documentation: web.config.template:24-28 and DEPLOY-IIS.md:138-142 justify the setting with two claims that are both false against the current Program.cs (no UseHsts/UseHttpsRedirection exists; Swagger is unconditional)."
+    },
+    {
+      "title": "IIS app pool identity granted db_owner on [CMS]",
+      "confidence": 8,
+      "verdict": "NOT a standalone vulnerability — suppressed",
+      "reason": "setup-iis.ps1:280 runs ALTER ROLE db_owner ADD MEMBER. Real over-privilege, but a blast-radius amplifier rather than an entry point: reaching it needs a pre-existing SQL injection or RCE, and none was found. The identity already legitimately reads every table it exposes, including SysConfig.symmetricSecurityKey. Dropping to db_datareader + db_datawriter would deny DDL/DROP only. Worth doing as defense-in-depth."
+    },
+    {
+      "title": "GET /api/lookups/app-users returns the full user roster to any authenticated caller",
+      "confidence": 7,
+      "verdict": "Below the 8/10 daily gate — suppressed as standalone",
+      "reason": "LookupsController.cs:7-13 has no role attribute; LookupRepository.cs:16-21 returns every AppUser row unfiltered. Its only consumers (app-role-form.ts:61, app-role-detail.ts:33) are both behind adminGuard, so the endpoint is broader than any consumer needs. But spec/cross-cutting.md explicitly designates /api/lookups/* as the non-admin picker surface, so this is arguably intended, and colleague names are rarely secret in an internal CMS. Reported instead as the enumeration primitive in Finding #2's exploit chain."
+    },
+    {
+      "title": "PasswordHasher.Verify still accepts legacy unsalted SHA-256 hashes",
+      "confidence": 5,
+      "verdict": "NOT a vulnerability — suppressed",
+      "reason": "PasswordHasher.cs:71-72 accepts 64-char hex. Grants an attacker nothing: the legacy branch still requires the correct plaintext and compares in constant time (line 148). No format-confusion path — Hash() only ever emits pbkdf2$sha512$..., which can never be 64-all-hex, so an attacker cannot write or downgrade to a weak hash. Dormant accounts do keep unsalted hashes indefinitely (upgrade fires only on login), but exploiting that requires already holding the database — post-compromise hardening, not a live flaw. Deliberate, documented, self-retiring migration."
+    },
+    {
+      "title": "No account lockout or login throttling",
+      "confidence": 6,
+      "verdict": "Suppressed as standalone (hard exclusion 1 — rate limiting)",
+      "reason": "Verified absent: no AddRateLimiter, no attempt counter column, Login records nothing. Against a strong unknown password, PBKDF2-HMAC-SHA512 at 210,000 iterations already imposes real per-guess cost. The practical risk is spraying one KNOWN password across many accounts, which is counted in Finding #2's exploit chain rather than double-reported here."
+    },
+    {
+      "title": "AppRole.PermissionLevel is persisted and CRUD-able but never consulted for authorization",
+      "confidence": 9,
+      "verdict": "Missing feature, not a vulnerability — suppressed (hard exclusion 6)",
+      "reason": "Every hit across the codebase is CRUD plumbing. The authorization model actually in force (Admin role vs. authenticated) is coherent and enforced. No code relies on PermissionLevel for a security decision, so its being unused is a latent-design observation, not a defect."
+    },
+    {
+      "title": "RowAuditController is readable by any authenticated user",
+      "confidence": 8,
+      "verdict": "NOT a vulnerability — suppressed",
+      "reason": "tableName is bound as a value against a TableName column (RowAuditRepository.cs:42-47), never an identifier — not injectable. Updates leak field NAMES only (RowAuditWriter.cs:116); Insert/Delete leak the first string property, which for AppUser is UserId — and no PasswordHash property exists on the model, so no hash can reach ActionDesc. The identities disclosed are already public to authenticated users via /api/lookups/*. Latent fragility worth a comment: the 'first string property' rule is reflection-based, so a future model gaining a sensitive leading string property would silently start publishing it."
+    },
+    {
+      "title": "Test-fixture password literal CMS4fun# in ResetPasswordAuthorizationTests.cs:145",
+      "confidence": 6,
+      "verdict": "Suppressed (hard exclusion 10 — test fixture)",
+      "reason": "Appears only in test files, never in non-test code, so it is excluded by the fixture rule. Flagged to the user anyway because it does not look like a placeholder and, if it matches the live SysConfig 'appConfig'.defaultPassword, it publishes the key to Finding #2's exploit chain in a committed file. Unverifiable from the repo alone — the real value lives in the database."
+    }
+  ],
+  "clean_areas": [
+    "Secrets archaeology (Phase 2): no AKIA/ghp_/xoxb-/sk-ant-/sk_live_/PRIVATE KEY patterns anywhere in git history across all branches. No .env, .pem, .pfx, or .key file ever tracked. No credentials in database/*.sql — SysConfig rows are not seeded by the repo. Only hits are xUnit fixtures.",
+    "CI/CD (Phase 4): no GitHub Actions, GitLab CI, or CircleCI configuration exists. No pipeline attack surface.",
+    "Containers/IaC (Phase 5): no Dockerfile, docker-compose, Terraform, or Kubernetes manifests. deploy/publish/ build output is gitignored (deploy/.gitignore) and only 5 deploy files are tracked.",
+    "Webhooks/integrations (Phase 6): no inbound webhook receivers, no outbound third-party calls, no TLS-verification-disabled patterns. The only external URL is the fixed https://www.uuu.com.tw QR target in CoursePublicUrl.cs, with Uri.EscapeDataString on the interpolated segment — no SSRF.",
+    "LLM/AI security (Phase 7): no AI/LLM integration in the application.",
+    "Skill supply chain (Phase 8): one repo-local skill (.claude/skills/crud/SKILL.md). Clean — no network calls, no credential access, no prompt-injection patterns. No .claude/settings.json hooks.",
+    "A01 Broken Access Control: deny-by-default global AuthorizeFilter with exactly one audited [AllowAnonymous] (AuthController.cs:45, login). All 3 management controllers carry class-level [Authorize(Roles=Admin)]. Self-service writes take identity from the JWT, never the body (AuthController.cs:95, 121). No writable path from a non-Admin to their own RoleIds — roles are minted from the DB at login and the token is signature-validated.",
+    "A03 Injection: no SQL injection reachable. Every dynamic WHERE builder uses hardcoded SQL literals with values bound via DynamicParameters. The interpolation that looks dangerous — $\"%{query.Keyword.Trim()}%\" — is a parameter VALUE passed to p.Add, not SQL text. No user-controlled ORDER BY or column identifier anywhere. No command/template injection.",
+    "A03 XSS: no innerHTML, dangerouslySetInnerHTML, bypassSecurityTrust, eval, or new Function anywhere in the Angular app. Default escaping intact.",
+    "A02 Password storage: PBKDF2-HMAC-SHA512, 210,000 iterations (OWASP-current), 128-bit per-password random salt, self-describing encoding, constant-time comparison via CryptographicOperations.FixedTimeEquals. Correct upgrade-on-login path.",
+    "A07 Login flow: uniform 401 across user-unknown / inactive / wrong-password, so the three checks cannot be told apart. PasswordHash never selected into the AppUser model and never crosses the API boundary.",
+    "A09 Logging: RowAudit writes Insert/Update/Delete on the same transaction as the change; every detail page carries the audit badge. Exception middleware logs full stack traces server-side while returning a generic message.",
+    "Session storage: JWT lives in sessionStorage (cms.auth), never localStorage — verified by auth.service.spec.ts:56."
+  ],
+  "trend": {
+    "prior_report_date": null,
+    "resolved": 0,
+    "persistent": 0,
+    "new": 3,
+    "direction": "first_run"
+  },
+  "protection_files": {
+    "gitleaks_toml": false,
+    "secretlintrc": false,
+    "recommendation": "No secret-scanning config exists. Given there is no CI pipeline to run it in, this is low priority — but a .gitleaks.toml plus a pre-commit hook would be cheap insurance if a pipeline is added later.",
+    "gstack_gitignored": true
+  }
+}
