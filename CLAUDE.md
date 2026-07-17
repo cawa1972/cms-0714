@@ -13,6 +13,7 @@ Orientation + hard guardrails only — detail lives in reference files, loaded o
 | building a customized (non-standard-UI) feature | `spec/custom/{Feature}/` — hand-written spec + UI mockup PNGs |
 | generating from a schema | `spec/code-gen.convention.md` + `spec/feature-spec.template.md` · worked examples: `spec/sample1.spec.md` (Course), `spec/sample2.spec.md` (SkillTrain) |
 | using gstack dev tooling | `spec/gstack.md` — skill catalogue |
+| about to hit a known gotcha (PDF/QuestPDF, toasts, Program.cs bootstrap, PS 5.1 encoding) | `spec/learnings.md` — hard-won pitfalls captured from past sessions |
 
 ## Layout
 
