@@ -157,6 +157,32 @@ describe('CourseForm (add mode)', () => {
     );
     expect(routerSpy.navigate).toHaveBeenCalledWith(['/courses', 5]);
   });
+
+  // Regression: ISSUE-001 — scheduleOff before scheduleOn saved with no validation error.
+  // Found by /qa on 2026-07-17
+  // Report: .gstack/qa-reports/qa-report-cms-2026-07-17.md
+  it('does not save when scheduleOff is before scheduleOn', () => {
+    const { component, serviceSpy } = setup(null);
+    component['form'].patchValue({
+      title: 'K8s 入門',
+      courseId: 'K8S-101',
+      prodCourseId: 'PROD-K8S-101',
+      friendlyUrl: 'k8s-101',
+      displayOrder: 5,
+      partnerPkid: 1,
+      publishStatusPkid: 1,
+      scheduleOn: new Date(2026, 2, 1),
+      scheduleOff: new Date(2020, 2, 1),
+      hour: 16,
+      listPrice: 20000,
+      learningCredit: 5,
+    });
+
+    component.save();
+
+    expect(serviceSpy.create).not.toHaveBeenCalled();
+    expect(component['form'].hasError('scheduleOrder')).toBeTrue();
+  });
 });
 
 describe('CourseForm (edit mode)', () => {

@@ -7,7 +7,7 @@ namespace CMS.API.Models;
 /// <see cref="Pkid"/> is ignored on create (the database assigns it via IDENTITY); on update it
 /// identifies the row to modify. <see cref="CourseGroupPkid"/> is nullable (optional group).
 /// </summary>
-public class CourseRequest
+public class CourseRequest : IValidatableObject
 {
     public int Pkid { get; set; }
 
@@ -71,4 +71,14 @@ public class CourseRequest
     public string? OtherInfo { get; set; }
 
     public bool CanRepeat { get; set; }
+
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        if (ScheduleOff < ScheduleOn)
+        {
+            yield return new ValidationResult(
+                "下架日期不可早於上架日期。(End date cannot be before start date.)",
+                [nameof(ScheduleOff)]);
+        }
+    }
 }

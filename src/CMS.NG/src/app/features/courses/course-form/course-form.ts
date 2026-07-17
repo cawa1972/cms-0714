@@ -1,5 +1,5 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { InputTextModule } from 'primeng/inputtext';
@@ -20,6 +20,13 @@ import { RowAuditBadge } from '@core/components/row-audit-badge/row-audit-badge'
 interface NumOption {
   value: number;
   label: string;
+}
+
+/** Group validator: scheduleOff must not be before scheduleOn (once both are filled). */
+function scheduleOrder(group: AbstractControl): ValidationErrors | null {
+  const on = group.get('scheduleOn')?.value as Date | null;
+  const off = group.get('scheduleOff')?.value as Date | null;
+  return on && off && off < on ? { scheduleOrder: true } : null;
 }
 
 @Component({
@@ -81,7 +88,7 @@ export class CourseForm implements OnInit {
     note: [null as string | null, [Validators.maxLength(4000)]],
     otherInfo: [null as string | null, [Validators.maxLength(4000)]],
     canRepeat: [false],
-  });
+  }, { validators: scheduleOrder });
 
   ngOnInit(): void {
     const idParam = this.route.snapshot.paramMap.get('id');
@@ -213,5 +220,11 @@ export class CourseForm implements OnInit {
   protected invalid(control: string): boolean {
     const c = this.form.get(control);
     return !!c && c.invalid && (c.dirty || c.touched);
+  }
+
+  /** scheduleOrder is a group-level error, surfaced under scheduleOff once it has been touched. */
+  protected scheduleOrderInvalid(): boolean {
+    const off = this.form.get('scheduleOff');
+    return this.form.hasError('scheduleOrder') && !!off && (off.dirty || off.touched);
   }
 }

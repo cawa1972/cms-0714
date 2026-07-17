@@ -152,6 +152,8 @@
       />
       @if (invalid('scheduleOff')) {
         <div class="field-error">下架日期為必填。</div>
+      } @else if (scheduleOrderInvalid()) {
+        <div class="field-error">下架日期不可早於上架日期。(End date cannot be before start date.)</div>
       }
     </div>
 
